@@ -40,6 +40,11 @@ def shutdown_session(exception=None):
     db_session.remove()
 
 
+@app.route("/", methods=['GET', 'POST'])
+def home():
+    print('GET/POST home')
+
+
 @app.route("/callback", methods=['POST'])
 def callback():
     #print(f"this is request.headers: {request.headers}")
@@ -66,48 +71,83 @@ def handle_message(event):
     try:
         #print(f"this is event: {event}")
         user_id = event.source.user_id
-        db_session.get_or_create_user(user_id=user_id)
+        user = db_session.get_or_create_user(user_id=user_id)
         cart = Cart(user_id=user_id)
         
         msg_text = str(event.message.text).lower()
         msg_reply = None
-        if msg_text in ['i am ready to order', 'add', '加入購物車']:
-            msg_reply = Products.list_all() # call class method
-        elif msg_text in ['my cart', 'cart', '我的購物車']:
-            msg_reply = TextSendMessage(text='cart')
-        elif "i'd like to order" in msg_text:
-            product_name = msg_text.split('\n')[0]
-            reserve_time = msg_text.split('\n')[1]
-            num_item = msg_text.split('\n')[-1]
-            #print(product_name, num_item)
-            product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
-            if product and num_item and num_item != '0' and num_item.isdigit():
-                cart.add(product=product_name, num=num_item, time=reserve_time)
-                items = f"Reserving:\n"
-                for i in [f"    {value['amount']} {key} at {value['datetime']}\n" for key, value in cart.bucket().items()]:
-                    items = items+i
+        if (msg_text in ['date', 'time', 'datetime']) or ('pls select date/time' in msg_text):
+            datetime_confirm_template = ConfirmTemplate(
+                    text=f'Please Pick a Date/Time',
+                    actions=[
+                        DatetimePickerAction(label="Date and Time",
+                                                data='DatetimePickerAction:cart_datetime',
+                                                mode='datetime',
+                                                #initial=,
+                                                #max=,
+                                                #min=
+                                                ),
+                        MessageAction(label="Check Availablility", text="available")
+                    ])
+            msg_reply = TemplateSendMessage(alt_text='Pick Date and Time', template=datetime_confirm_template)
+        
+        elif msg_text in ['i am ready to order', 'add', '加入購物車']:
+            try:
+                msg_reply = Products.product_carousel(cart) # call class method
+            except AttributeError as e:
+                print(e)
+                #config.line_bot_api.reply_message(event.reply_token, msg_reply)
 
-                add_revise_confirm_template = ConfirmTemplate(
-                    text=f'{items}Anything else?',
-                    actions=[
-                        MessageAction(label='Add/Revise', text='add'),
-                        MessageAction(label="That's it", text="that's it")
-                    ])
-                msg_reply = TemplateSendMessage(alt_text='anything else?', template=add_revise_confirm_template)
+        elif msg_text in ['my cart', 'cart', '我的購物車', "that's it"]:
+            if cart.bucket():
+                msg_reply = cart.display()
             else:
-                reselect_confirm_template = ConfirmTemplate(
-                    text=f"Sorry, we don't have {product_name} or you forgot to enter a right amount.",
-                    actions=[
-                        MessageAction(label='Add/Revise', text='add'),
-                        MessageAction(label="That's it", text="that's it")
-                    ])
-                msg_reply = TemplateSendMessage(alt_text='anything else?', template=reselect_confirm_template)
+                msg_reply = TextSendMessage(text='Your cart is empty now!')
+        elif "i'd like to order" in msg_text:
+            print(cart.bucket())
+            try:
+                product_name = msg_text.split('\n')[1]
+                datetime = msg_text.split('\n')[3]
+                num_item = msg_text.split('\n')[-1]
+                #print(product_name, num_item)
+                product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
+                if product and num_item and num_item != '0' and num_item.isdigit():
+                    cart.add(datetime=datetime, product=product_name, num=num_item)
+                    #print(cart.bucket().items())
+                    items = f"Reserving at {datetime}:\n"
+                    for i in [f"    {value} {key}\n" for key, value in cart.bucket()[datetime].items() if key != '']:
+                        items = items+i
+
+                    add_revise_confirm_template = ConfirmTemplate(
+                        text=f'{items}Anything else?',
+                        actions=[
+                            PostbackAction(
+                                label='Add/Revise',
+                                display_text='Add/Revise',
+                                data=f'PostbackAction:cart_datetime={datetime}'
+                                ),
+                            MessageAction(label="That's it", text="that's it")
+                        ])
+                        
+                    msg_reply = TemplateSendMessage(alt_text='anything else?', template=add_revise_confirm_template)
+                else:
+                    reselect_confirm_template = ConfirmTemplate(
+                        text=f"Sorry, we don't have {product_name} or you forgot to enter a right amount.",
+                        actions=[
+                            MessageAction(label='Add/Revise', text='add'),
+                            MessageAction(label="That's it", text="that's it")
+                        ])
+                    msg_reply = TemplateSendMessage(alt_text='anything else?', template=reselect_confirm_template)
+            except Exception as e:
+                print(e)
+
         if msg_reply is None: 
             msg_reply = [
-                TextSendMessage(text='''若要將商品加入購物車，請傳送訊息: 加入購物車\n若要顯示您的購物車，請傳送訊息: 我的購物車'''),
-                TextSendMessage(text='''If you would like to add the product to the cart, please type: "add" or "i am ready to order"'''),
+                #TextSendMessage(text='''若要將商品加入購物車，請傳送訊息: 加入購物車\n若要顯示您的購物車，請傳送訊息: 我的購物車'''),
+                TextSendMessage(text='''If you would like to add the product to the cart, please type: "time" or "date"'''),
                 TextSendMessage(text='''If you would like to see the products in your cart, please type: "my cart" or "cart"''')
             ]
+
         config.line_bot_api.reply_message(
             event.reply_token,
             msg_reply)
@@ -119,19 +159,21 @@ def handle_message(event):
 @config.handler.add(PostbackEvent)
 def handle_postback(event):
     #print(event)
-    datatime_confirm_template = ConfirmTemplate(
-                    text=f"Reserving:\n    {event.postback.data}\n    {event.postback.params['datetime']}",
-                    actions=[
-                        URIAction(
-                            label= 'Enter Amount', 
-                            uri=f"https://line.me/R/oaMessage/{config.Bot_ID}/?" + quote(f"{event.postback.data}\n{event.postback.params['datetime']}\nI'd like to order:\n(Pls type in number)\n")
-                        ),
-                        MessageAction(label="Select Again", text="add")
-                    ])
-    msg_reply = TemplateSendMessage(alt_text='Reserving the time', template=datatime_confirm_template)
-    config.line_bot_api.reply_message(
-            event.reply_token,
-            msg_reply)
+    if 'cart_datetime' in event.postback.data:
+        cart = Cart(user_id=event.source.user_id)
+        if 'DatetimePickerAction' in event.postback.data:
+            datetime = event.postback.params['datetime'].lower()
+            cart.add(datetime)
+        elif 'PostbackAction' in event.postback.data:
+            datetime = event.postback.data.lower().split('=')[-1]
+    
+    try:
+        msg_reply = Products.product_carousel(cart, datetime=datetime)
+        config.line_bot_api.reply_message(
+                    event.reply_token,
+                    msg_reply)
+    except AttributeError as e:
+        print(e)
 
 
 @config.handler.add(FollowEvent)
@@ -144,9 +186,9 @@ def handle_follow(event):
 
 
 @config.handler.add(UnfollowEvent)
-def handle_unfollow():
-    pass
-    #print('Unfollow event')
+def handle_unfollow(event):
+    unfollowing_user = db_session.get_or_create_user(event.source.user_id)
+    print(f'Unfollow event from {unfollowing_user}')
 
 
 if __name__ == "__main__":

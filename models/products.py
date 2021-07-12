@@ -1,9 +1,12 @@
+# import library
 from sqlalchemy import Column, Integer, String
 from linebot.models import FlexSendMessage, CarouselContainer
 from database import Base, db_session # should be executed at the root package
 
+# custom package
 import config
-from msg.json_msg import ie125_product_bubble
+from models.cart import Cart
+from msg.json_msg import product_bubble
 
 
 class Products(Base):
@@ -21,13 +24,12 @@ class Products(Base):
         return f'<Products {self.name!r}>'
 
     @classmethod
-    def list_all(cls):
+    def product_carousel(cls, cart, datetime='Pls Select Date/Time'):
         products = db_session.query(cls).all()
 
         bubbles = []
-
         for product in products:
-            bubble = ie125_product_bubble(product)
+            bubble = product_bubble(product=product, datetime=datetime).gen_product_bubble()
             bubbles.append(bubble)
             #print(bubble)
         

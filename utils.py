@@ -30,6 +30,7 @@ def init_db():
 
 def get_or_create_user(self, user_id):
     user = self.query(Users).filter_by(id=user_id).first()
+    print(f'{user} in db')
     
     if not user:
         profile = config.line_bot_api.get_profile(user_id)
