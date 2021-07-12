@@ -7,7 +7,7 @@ from linebot.models import *
 # import custom packages
 from database import db_session
 from models.products import Products
-from msg.json_msg import cart_bubble
+from msg.json_msg import cart_bubble, reserve_bubble
 
 
 cache = SimpleCache() # it is like a dict {id:<dict>}
@@ -39,6 +39,30 @@ class Cart(object):
     
     def reset(self):
         cache.set(key=self.user_id, value={})
+
+    def reserve(self):
+        bubbles = []
+        print(self.bucket())
+
+        for datetime, value in self.bucket().items():
+            reserve_box_comp = []
+            for product_name, num in value.items():
+                product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
+
+                reserve_box_comp.append(BoxComponent(
+                        layout='horizontal',
+                        spacing='sm',
+                        contents=[
+                            TextComponent(text=f"{product_name}", size='sm', color='#555555', flex=0, align='start'),
+                            TextComponent(text=f"{num}", size='sm', color='#111111', align='end')
+                        ]
+                    )
+                )
+            #bubble = reserve_bubble(datetime=datetime, box=reserve_box_comp).gen_reserve_bubble()
+            bubbles.append(reserve_bubble(datetime=datetime, box=reserve_box_comp).gen_reserve_bubble())
+        msg = FlexSendMessage(alt_text='IE125 reserve carousel', contents=CarouselContainer(contents=bubbles))
+        #msg = FlexSendMessage(alt_text='Cart', contents=bubble)
+        return msg
 
     def display(self):
         total = 0

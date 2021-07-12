@@ -13,25 +13,29 @@ class reserve_bubble():
 
     def gen_reserve_bubble(self):
         bubble = BubbleContainer(
+                direction='ltr',
                 body=BoxComponent(
                     layout='vertical',
                     spacing='sm',
                     contents=[
                         TextComponent(
-                            text=f"Reserving at {self.datetime}:",
+                            text=f"Reserving at {self.datetime}",
                             weight='bold',
                             size='xl',
                             wrap=True,
+                            contents=[]
                         ),
-                        SeparatorComponent(margin='sm'),
+                        SeparatorComponent(),
                         BoxComponent(
-                            layout='baseline',
+                            layout='vertical',
+                            margin='xxl',
+                            spacing='sm',
                             contents=self.box
                         )
                     ]
                 ),
                 footer=BoxComponent(
-                    layoyt='vertical',
+                    layout='vertical',
                     spacing='sm',
                     contents=[
                         ButtonComponent(
@@ -39,7 +43,7 @@ class reserve_bubble():
                             action=PostbackAction(
                                 label="Add/Revise",
                                 text="Add/Revise",
-                                data=f"PostbackAction:cart_datetime={datetime}"
+                                data=f"PostbackAction:cart_datetime={self.datetime}"
                             )
                         ),
                         ButtonComponent(
@@ -51,6 +55,8 @@ class reserve_bubble():
                     ]
                 )
         )
+        return bubble
+
 
 class product_bubble():
     def __init__(self, product, datetime):
