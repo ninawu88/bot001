@@ -42,7 +42,7 @@ class reserve_bubble():
                             style='primary',
                             action=PostbackAction(
                                 label="Add/Revise",
-                                text="Add/Revise",
+                                text="Processing...Add/Revise",
                                 data=f"PostbackAction:cart_datetime={self.datetime}"
                             )
                         ),

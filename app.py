@@ -140,7 +140,10 @@ def handle_message(event):
         """ except Exception as e:
             print(e) """
 
-    if msg_reply is None: 
+    elif 'processing' in msg_text:
+        msg_reply = TextSendMessage(text="On the way")
+
+    if (msg_reply is None): 
         msg_reply = [
             #TextSendMessage(text='''若要將商品加入購物車，請傳送訊息: 加入購物車\n若要顯示您的購物車，請傳送訊息: 我的購物車'''),
             TextSendMessage(text='''If you would like to add the product to the cart, please type: "time" or "date"'''),
