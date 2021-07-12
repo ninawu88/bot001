@@ -5,7 +5,6 @@ from database import Base, db_session # should be executed at the root package
 
 # custom package
 import config
-from models.cart import Cart
 from msg.json_msg import product_bubble
 
 
@@ -24,7 +23,7 @@ class Products(Base):
         return f'<Products {self.name!r}>'
 
     @classmethod
-    def product_carousel(cls, cart, datetime='Pls Select Date/Time'):
+    def product_carousel(cls, datetime='Pls Select Date/Time'):
         products = db_session.query(cls).all()
 
         bubbles = []

@@ -93,7 +93,7 @@ def handle_message(event):
         
         elif msg_text in ['i am ready to order', 'add', '加入購物車']:
             try:
-                msg_reply = Products.product_carousel(cart) # call class method
+                msg_reply = Products.product_carousel() # call class method
             except AttributeError as e:
                 print(e)
                 #config.line_bot_api.reply_message(event.reply_token, msg_reply)
@@ -104,7 +104,6 @@ def handle_message(event):
             else:
                 msg_reply = TextSendMessage(text='Your cart is empty now!')
         elif "i'd like to order" in msg_text:
-            print(cart.bucket())
             try:
                 product_name = msg_text.split('\n')[1]
                 datetime = msg_text.split('\n')[3]
@@ -114,6 +113,7 @@ def handle_message(event):
                 if product and num_item and num_item != '0' and num_item.isdigit():
                     cart.add(datetime=datetime, product=product_name, num=num_item)
                     #print(cart.bucket().items())
+                    
                     items = f"Reserving at {datetime}:\n"
                     for i in [f"    {value} {key}\n" for key, value in cart.bucket()[datetime].items() if key != '']:
                         items = items+i
@@ -160,15 +160,13 @@ def handle_message(event):
 def handle_postback(event):
     #print(event)
     if 'cart_datetime' in event.postback.data:
-        cart = Cart(user_id=event.source.user_id)
         if 'DatetimePickerAction' in event.postback.data:
             datetime = event.postback.params['datetime'].lower()
-            cart.add(datetime)
         elif 'PostbackAction' in event.postback.data:
             datetime = event.postback.data.lower().split('=')[-1]
     
     try:
-        msg_reply = Products.product_carousel(cart, datetime=datetime)
+        msg_reply = Products.product_carousel(datetime=datetime)
         config.line_bot_api.reply_message(
                     event.reply_token,
                     msg_reply)

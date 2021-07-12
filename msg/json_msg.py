@@ -6,6 +6,52 @@ from urllib.parse import quote
 import config
 
 
+class reserve_bubble():
+    def __init__(self, datetime, box):
+        self.datetime = datetime
+        self.box = box
+
+    def gen_reserve_bubble(self):
+        bubble = BubbleContainer(
+                body=BoxComponent(
+                    layout='vertical',
+                    spacing='sm',
+                    contents=[
+                        TextComponent(
+                            text=f"Reserving at {self.datetime}:",
+                            weight='bold',
+                            size='xl',
+                            wrap=True,
+                        ),
+                        SeparatorComponent(margin='sm'),
+                        BoxComponent(
+                            layout='baseline',
+                            contents=self.box
+                        )
+                    ]
+                ),
+                footer=BoxComponent(
+                    layoyt='vertical',
+                    spacing='sm',
+                    contents=[
+                        ButtonComponent(
+                            style='primary',
+                            action=PostbackAction(
+                                label="Add/Revise",
+                                text="Add/Revise",
+                                data=f"PostbackAction:cart_datetime={datetime}"
+                            )
+                        ),
+                        ButtonComponent(
+                            action=MessageAction(
+                                label="That's it", 
+                                text="that's it"
+                            )
+                        )
+                    ]
+                )
+        )
+
 class product_bubble():
     def __init__(self, product, datetime):
         self.product = product
@@ -79,3 +125,80 @@ class product_bubble():
                 ]
             )
         )
+
+
+class cart_bubble():
+    def __init__(self, box, total):
+        self.box = box
+        self.total = total
+    
+    def gen_cart_bubble(self):
+        bubble = BubbleContainer(
+            direction='ltr',
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text=f"Here is your order:",
+                                        size='md', wrap=True),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=self.box
+                    ),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=[
+                            BoxComponent(
+                                layout='horizontal',
+                                contents=[
+                                    TextComponent(text='Total',
+                                                    size='sm', color='#555555', flex=0),
+                                    TextComponent(text=f'NT$ {self.total}',
+                                                    size='sm', color='#111111', align='end')
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            ),
+            footer=BoxComponent(
+                layout='vertical',
+                spacing='md',
+                contents=[
+                    ButtonComponent(
+                        style='primary',
+                        color='#1DB446',
+                        action=PostbackAction(label='Checkout',
+                                                display_text='checkout',
+                                                data='action=checkout')
+                    ),
+                    BoxComponent(
+                        layout='horizontal',
+                        spacing='md',
+                        contents=[
+                            ButtonComponent(
+                                style='primary',
+                                color='#aaaaaa',
+                                action=MessageAction(label='Empty Cart',
+                                                        text='empty cart')
+                            ),
+                            ButtonComponent(
+                                style='primary',
+                                color='#aaaaaa',
+                                flex=2,
+                                action=MessageAction(label='Add',
+                                                        text='add')
+                            )
+                        ]
+                    )
+                ]
+            )
+        ) 
+
+        msg = FlexSendMessage(alt_text='Cart', contents=bubble)
+        return msg
