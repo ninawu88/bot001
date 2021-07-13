@@ -10,7 +10,7 @@ from models.products import Products
 from msg.json_msg import cart_bubble, reserve_bubble
 
 
-cache = SimpleCache() # it is like a dict {id:<dict>}
+cache = SimpleCache(threshold=500, default_timeout=0) # it is like a dict {id:<dict>}
 #print(dir(cache))
 #print(cache.get_many())
 
@@ -24,9 +24,7 @@ class Cart(object):
 
     def add(self, datetime, product, num):
         bucket = cache.get(key=self.user_id)
-        print(bucket)
-        print(self.user_id)
-        print(datetime, product, num)
+        #print(bucket)
         if bucket == None:
             cache.add(key=self.user_id, value={datetime:{product:int(num)}}) # equal to cache.set()
         elif datetime in bucket.keys():
@@ -35,8 +33,7 @@ class Cart(object):
         else:
             bucket.update({datetime:{product:int(num)}}) # dict.update(), could update a pair or add a new pair
             cache.set(key=self.user_id, value=bucket) # set, like updating
-        print(self.bucket())
-    
+
     def reset(self):
         cache.set(key=self.user_id, value={})
 

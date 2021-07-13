@@ -103,6 +103,11 @@ def handle_message(event):
             msg_reply = cart.display()
         else:
             msg_reply = TextSendMessage(text='Your cart is empty now!')
+
+    elif msg_text == 'empty cart':
+        cart.reset()
+        msg_reply = TextSendMessage(text='Your cart is empty now!')
+
     elif "i'd like to order" in msg_text:
         product_name = msg_text.split('\n')[1]
         datetime = msg_text.split('\n')[3]
@@ -110,24 +115,12 @@ def handle_message(event):
         #print(product_name, num_item)
         product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
         if product and num_item and num_item != '0' and num_item.isdigit():
+            # after certain timeout, the cache will be dropped
+            if cart.bucket() == None:
+                print('reset cache')
+                cart.reset()
             cart.add(datetime=datetime, product=product_name, num=num_item)
-            #print(cart.bucket().items())
-
-            """items = f"Reserving at {datetime}:\n"
-            for i in [f"    {value} {key}\n" for key, value in cart.bucket()[datetime].items() if key != '']:
-                items = items+i
-
-            add_revise_confirm_template = ConfirmTemplate(
-                text=f'{items}Anything else?',
-                actions=[
-                    PostbackAction(
-                        label='Add/Revise',
-                        display_text='Add/Revise',
-                        data=f'PostbackAction:cart_datetime={datetime}'
-                        ),
-                    MessageAction(label="That's it", text="that's it")
-                ]) """
-                
+            print(cart.bucket().items())
             msg_reply = cart.reserve()
         else:
             reselect_confirm_template = ConfirmTemplate(
