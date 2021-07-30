@@ -7,7 +7,7 @@
 
 # import library 
 import types
-from flask import Flask, request, abort
+from flask import Flask, request, abort, render_template
 
 from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
@@ -41,9 +41,15 @@ def shutdown_session(exception=None):
 
 
 @app.route("/", methods=['GET', 'POST'])
-def home():
-    print('GET/POST home')
-
+def index():
+    # render the file under /templates
+    # request.args for GET 
+    # request.form for POST
+    if request.method == 'GET':
+        return render_template("index.html")
+    elif request.method == 'POST':
+        return render_template("greet.html", name=request.form.get('name', 'world'))
+    
 
 @app.route("/callback", methods=['POST'])
 def callback():

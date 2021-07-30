@@ -1,0 +1,14 @@
+<!-- Boil from ./layout.html -->
+{% extends "layout.html" %}
+
+<!-- body for the placeholder -->
+{% block body %}
+
+    <!-- After filling the form, Get sth from the /greet route -->
+    <!-- 'Post' is to prevent the params from revealing in the url -->
+    <form action="/" method="post">
+        <input name="name" auto_complete="off" autofocus placeholder="Name" type="text" >
+        <input type="submit">
+    </form>
+
+{% endblock %}
