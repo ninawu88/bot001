@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy.orm import relationship
 from database import Base # should be executed at the root package
 
 class Users(Base):
@@ -11,6 +12,10 @@ class Users(Base):
     image_url = Column(String(length=256))
     created_time = Column(DateTime, default=func.now())
 
+    orders = relationship('Orders', backref='user') # relationship(cls, backref='var_name')
+    # user.orders
+    # order.user
+    
     """ # instance attr
     # without init, one could use argument to modify the class attr. ex. Users(id='123')
     def __init__(self, name=None, email=None):

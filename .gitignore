@@ -4,4 +4,4 @@
 /.env
 /*.db
 /cs50/*
-
+/alembic/*

@@ -1,7 +1,7 @@
 from sqlalchemy_utils import database_exists
 from models.products import Products, product_lst
 from models.users import Users
-from database import Base
+from database import Base, engine
 
 import config
 

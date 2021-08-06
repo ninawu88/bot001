@@ -4,6 +4,7 @@
 # pip3 install line-bot-sdk
 # pip3 install SQLAlchemy==1.4.20
 # pip3 install SQLAlchemy-Utils
+# pip3 install alembic
 
 # import library 
 import types
@@ -22,6 +23,8 @@ from database import db_session
 from models.users import Users
 from models.products import Products
 from models.cart import Cart
+from models.order import Orders
+from models.item import Items
 
 
 app = Flask(__name__)
