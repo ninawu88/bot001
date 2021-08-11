@@ -14,7 +14,9 @@ from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
 )
 from linebot.models import *
-from urllib.parse import quote
+from urllib.parse import quote, parse_qsl
+import uuid
+
 
 # import custom module
 import config
@@ -25,6 +27,7 @@ from models.products import Products
 from models.cart import Cart
 from models.order import Orders
 from models.item import Items
+from models.linepay import LinePay
 
 
 app = Flask(__name__)
@@ -52,7 +55,12 @@ def index():
         return render_template("index.html")
     elif request.method == 'POST':
         return render_template("greet.html", name=request.form.get('name', 'world'))
-    
+
+
+@app.route("/confirm")
+def confirm():
+    pass
+
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -162,7 +170,55 @@ def handle_message(event):
 
 @config.handler.add(PostbackEvent)
 def handle_postback(event):
-    #print(event)
+    data = dict(parse_qsl(event.postback.data))
+    action = data.get('action')
+    
+    if action == 'checkout':
+        user_id = event.source.user_id
+        cart = Cart(user_id=user_id)
+        if not cart.bucket():
+            msg_reply = TextSendMessage(text='Your cart is empty now.')
+            config.line_bot_api.reply_message(
+                        event.reply_token,
+                        [msg_reply])
+            return 'OK'
+        order_id = uuid.uuid4().hex
+        total = 0
+        items = []
+        for product_name, num in cart.bucket().items():
+            product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
+            item = Items(product_id=product.id,
+                        product_name=product.name,
+                        product_price=product.price,
+                        order=order_id,
+                        quantity=num)
+            items.append(item)
+            total += product.price * int(num)
+        cart.reset()
+        line_pay = LinePay()
+        info = line_pay.pay(product_name='Fun2Go',
+                            amount=total,
+                            order_id=order_id,
+                            product_image_url=config.STORE_IMAGE_URL)
+        pay_web_url = info['paymentUrl']['web']
+        tx_id = info['tx_id']
+        order = Orders(id=order_id,
+                        tx_id=tx_id,
+                        is_pay=False,
+                        amount=total,
+                        user_id=user_id)
+        db_session.add(order)
+        for item in items:
+            db_session.add(item)
+        db_session.commit()
+        msg_reply = TemplateSendMessage(alt_text='Thx. Pls go ahead to the payment.',
+                                        template=ButtonsTemplate(text='Thx. Pls go ahead to the payment.',
+                                                                action=[URIAction(label='Pay NT${}'.format(order.amount),
+                                                                                    uri=pay_web_url)
+                                                                                    ]))
+        config.line_bot_api.reply_message(event.reply_token, [msg_reply])
+        return 'OK'
+
     if 'cart_datetime' in event.postback.data:
         if 'DatetimePickerAction' in event.postback.data:
             datetime = event.postback.params['datetime'].lower()

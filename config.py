@@ -8,6 +8,8 @@ from linebot import (
 
 
 load_dotenv()
+
+# linebot msg api 
 Bot_ID = os.environ.get('Bot_ID')
 Channel_access_token = os.environ.get('Channel_access_token')
 Channel_secret =  os.environ.get('Channel_secret')
@@ -16,4 +18,12 @@ line_bot_api = LineBotApi(Channel_access_token)
 handler = WebhookHandler(Channel_secret)
 #print(os.environ.get('Channel_access_token'))
 
+# db
 db_path = 'sqlite:///' + f'{os.path.dirname(__file__)}/linebot.db'
+
+# linepay
+LINE_PAY_ID = os.environ.get('LINE_PAY_ID')
+LINE_PAY_SECRET = os.environ.get('LINE_PAY_SECRET')
+PAY_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/request'
+CONFIRM_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/{}/confirm'
+STORE_IMAGE_URL = 'https://imgur.com/a/YL71PJC'
