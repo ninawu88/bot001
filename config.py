@@ -26,4 +26,4 @@ LINE_PAY_ID = os.environ.get('LINE_PAY_ID')
 LINE_PAY_SECRET = os.environ.get('LINE_PAY_SECRET')
 PAY_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/request'
 CONFIRM_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/{}/confirm'
-STORE_IMAGE_URL = 'https://imgur.com/a/YL71PJC'
+STORE_IMAGE_URL = 'https://i.imgur.com/HvJQ4qL.png'

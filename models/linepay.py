@@ -8,7 +8,6 @@ class LinePay():
         self.channel_id = config.LINE_PAY_ID
         self.secret=config.LINE_PAY_SECRET
         self.redirect_url = url_for('.confirm', _external=True, _scheme='https')
-        print(self.redirect_url)
         self.currency=currency
     
     def _headers(self, **kwargs):
@@ -43,7 +42,7 @@ class LinePay():
 
     def _check_response(self, response):
         res_json = response.json()
-        print(res_json)
+        #print(res_json)
 
         if 200 <= response.status_code < 300:
             if res_json['returnCode'] == '0000':

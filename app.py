@@ -16,7 +16,10 @@ from linebot.exceptions import (
 from linebot.models import *
 from urllib.parse import quote, parse_qsl
 import uuid
-
+from datetime import datetime
+def strptime(time):
+    return datetime.strptime(time[2:], '%y-%m-%dt%H:%M')
+    
 
 # import custom module
 import config
@@ -57,29 +60,37 @@ def index():
         return render_template("greet.html", name=request.form.get('name', 'world'))
 
 
+# https://rvproxy.fun2go.energy/confirm
 @app.route("/confirm")
 def confirm():
-    pass
+    tx_id = request.args.get('transactionId')
+    order = db_session.query(Orders).filter(Orders.tx_id == tx_id).first()
+
+    if order:
+        line_pay = LinePay()
+        line_pay.confirm(tx_id=tx_id, amount=order.amount)
+        order.is_pay = True
+        db_session.commit()
+
+        # send receipt
+
+        return '<h1>Your payment is successful. Thx for your purchase.</h1>'
 
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    #print(f"this is request.headers: {request.headers}")
-
     # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
     # get request body as text
     body = request.get_data(as_text=True)
     #print(f"this is request.body: {body}")
     app.logger.info("Request body: " + body)
-
     # handle webhook body
     try:
         config.handler.handle(body, signature)
     except InvalidSignatureError:
         print("Invalid signature. Please check your channel access token/channel secret.")
         abort(400)
-
     return 'OK'
 
 
@@ -185,23 +196,28 @@ def handle_postback(event):
         order_id = uuid.uuid4().hex
         total = 0
         items = []
-        for product_name, num in cart.bucket().items():
-            product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
-            item = Items(product_id=product.id,
-                        product_name=product.name,
-                        product_price=product.price,
-                        order=order_id,
-                        quantity=num)
-            items.append(item)
-            total += product.price * int(num)
+        for time, value in cart.bucket().items():
+            for product_name, num in value.items():
+                product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
+                item = Items(product_id=product.id,
+                            reserved_datetime=strptime(time),
+                            product_name=product.name,
+                            product_price=product.price,
+                            quantity=int(num),
+                            order_id=order_id
+                            )
+                items.append(item)
+                total += product.price * int(num)
         cart.reset()
         line_pay = LinePay()
         info = line_pay.pay(product_name='Fun2Go',
                             amount=total,
                             order_id=order_id,
                             product_image_url=config.STORE_IMAGE_URL)
+        #print(info)
         pay_web_url = info['paymentUrl']['web']
-        tx_id = info['tx_id']
+        #print(pay_web_url)
+        tx_id = info['transactionId']
         order = Orders(id=order_id,
                         tx_id=tx_id,
                         is_pay=False,
@@ -213,9 +229,9 @@ def handle_postback(event):
         db_session.commit()
         msg_reply = TemplateSendMessage(alt_text='Thx. Pls go ahead to the payment.',
                                         template=ButtonsTemplate(text='Thx. Pls go ahead to the payment.',
-                                                                action=[URIAction(label='Pay NT${}'.format(order.amount),
-                                                                                    uri=pay_web_url)
-                                                                                    ]))
+                                                                actions=[URIAction(label='Pay NT${}'.format(order.amount), uri=pay_web_url)]
+                                                                )
+                                                                )
         config.line_bot_api.reply_message(event.reply_token, [msg_reply])
         return 'OK'
 
@@ -226,7 +242,8 @@ def handle_postback(event):
             datetime = event.postback.data.lower().split('=')[-1]
     
         try:
-            msg_reply = Products.product_carousel(datetime=datetime)
+            print(f"check {strptime(datetime)}")
+            msg_reply = Products.product_carousel(datetime=strptime(datetime))
             config.line_bot_api.reply_message(
                         event.reply_token,
                         msg_reply)

@@ -12,7 +12,7 @@ class Users(Base):
     image_url = Column(String(length=256))
     created_time = Column(DateTime, default=func.now())
 
-    orders = relationship('Orders', backref='user') # relationship(cls, backref='var_name')
+    orders = relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
     # user.orders
     # order.user
     
