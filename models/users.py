@@ -6,7 +6,7 @@ class Users(Base):
     # class attr
     # create a Table in database
     __tablename__ = 'users'
-    #i = 123
+    
     id = Column(String, primary_key=True)
     nick_name = Column(String)
     image_url = Column(String(length=256))
@@ -14,7 +14,7 @@ class Users(Base):
 
     orders = relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
     # user.orders
-    # order.user
+    # order.user, for backref
     
     """ # instance attr
     # without init, one could use argument to modify the class attr. ex. Users(id='123')

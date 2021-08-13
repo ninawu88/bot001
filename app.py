@@ -72,7 +72,8 @@ def confirm():
         order.is_pay = True
         db_session.commit()
 
-        # send receipt
+        msg = order.display_receipt()
+        config.line_bot_api.push_message(to=order.user_id, messages=msg)
 
         return '<h1>Your payment is successful. Thx for your purchase.</h1>'
 

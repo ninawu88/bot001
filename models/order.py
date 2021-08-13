@@ -1,4 +1,4 @@
-from re import S
+from typing import Text
 from sqlalchemy import Column, DateTime, String, Integer, func, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from linebot.models import *
@@ -16,5 +16,24 @@ class Orders(Base):
 
     items = relationship('Items', backref='order') # relationship(cls_name, backref='var_name')
     # order.items
-    # item.order
+    # item.order, for backref
+
+    def display_receipt(self):
+        item_box_components = []
+        for item in self.items:
+            item_box_components.append(BoxComponent(
+                layout='horizontal',
+                contents=[
+                    TextComponent(text=f'{item.quantity} x {item.product_name}',
+                                size='sm',
+                                color='#555555',
+                                flex=0),
+                    TextComponent(text=f'NT${item.quantity * item.product_price}',
+                                size='sm',
+                                color='#111111',
+                                align='end')
+                                ]
+            )
+            )
+        
 

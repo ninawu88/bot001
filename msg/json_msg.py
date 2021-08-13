@@ -57,6 +57,40 @@ class reserve_bubble():
         )
         return bubble
 
+class receipt_bubble():
+    def __init__(self, item_box_component):
+        self.box = item_box_component
+
+    def gen_receipt_bubble(self):
+        return BubbleContainer(
+            direction='ltr',
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text='RECEIPT',
+                                weight='bold',
+                                color='#1DB446',
+                                size='sm'),
+                    TextComponent(text='Fun2Go',
+                                weight='bold',
+                                size='xxl',
+                                margin='md'),
+                    TextComponent(text='Linebot Store',
+                                size='xs',
+                                color='#aaaaaa',
+                                wrap=True),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=self.box
+                    ),
+
+                    
+                ]
+            )
+        )
 
 class product_bubble():
     def __init__(self, product, datetime):
