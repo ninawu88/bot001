@@ -20,7 +20,10 @@ from urllib.parse import quote, parse_qsl
 import uuid
 from datetime import datetime
 def strptime(time):
-    return datetime.strptime(time[2:], '%y-%m-%dt%H:%M')
+    if 't' in time:
+        return datetime.strptime(time[2:], '%y-%m-%dt%H:%M')
+    else:
+        return datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
     
 
 # import custom module
@@ -202,6 +205,7 @@ def handle_postback(event):
         total = 0
         items = []
         for time, value in cart.bucket().items():
+            print(strptime(time), type(strptime(time)))
             for product_name, num in value.items():
                 product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
                 item = Items(product_id=product.id,

@@ -36,4 +36,39 @@ class Orders(Base):
             )
             )
         
+        BubbleContainer(
+            direction='ltr',
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text='RECEIPT',
+                                weight='bold',
+                                color='#1DB446',
+                                size='sm'),
+                    TextComponent(text='Fun2Go',
+                                weight='bold',
+                                size='xxl',
+                                margin='md'),
+                    TextComponent(text='Linebot Store',
+                                size='xs',
+                                color='#aaaaaa',
+                                wrap=True),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=item_box_components
+                    ),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=''
+                    )
+                ]
+            )
+        )
+
 

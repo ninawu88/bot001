@@ -7,7 +7,6 @@ from linebot.models import *
 # import custom packages
 from database import db_session
 from models.products import Products
-from msg.json_msg import cart_bubble, reserve_bubble
 
 
 cache = SimpleCache(threshold=500, default_timeout=0) # it is like a dict {id:<dict>}
@@ -50,21 +49,62 @@ class Cart(object):
                         layout='horizontal',
                         spacing='sm',
                         contents=[
-                            TextComponent(text=f"{product_name}", size='sm', color='#555555', flex=0, align='start'),
+                            TextComponent(text=f"{product.name}", size='sm', color='#555555', flex=0, align='start'),
                             TextComponent(text=f"{num}", size='sm', color='#111111', align='end')
                         ]
                     )
                 )
-            #bubble = reserve_bubble(datetime=datetime, box=reserve_box_comp).gen_reserve_bubble()
-            bubbles.append(reserve_bubble(datetime=datetime, box=reserve_box_comp).gen_reserve_bubble())
-        msg = FlexSendMessage(alt_text='IE125 reserve carousel', contents=CarouselContainer(contents=bubbles))
-        #msg = FlexSendMessage(alt_text='Cart', contents=bubble)
-        return msg
+                
+            bubble = BubbleContainer(
+                direction='ltr',
+                body=BoxComponent(
+                    layout='vertical',
+                    spacing='sm',
+                    contents=[
+                        TextComponent(
+                            text=f"Reserving at {datetime}",
+                            weight='bold',
+                            size='xl',
+                            wrap=True,
+                            contents=[]
+                        ),
+                        SeparatorComponent(),
+                        BoxComponent(
+                            layout='vertical',
+                            margin='xxl',
+                            spacing='sm',
+                            contents=reserve_box_comp
+                        )
+                    ]
+                ),
+                footer=BoxComponent(
+                    layout='vertical',
+                    spacing='sm',
+                    contents=[
+                        ButtonComponent(
+                            style='primary',
+                            action=PostbackAction(
+                                label="Add/Revise",
+                                text="Processing...Add/Revise",
+                                data=f"PostbackAction:cart_datetime={datetime}"
+                            )
+                        ),
+                        ButtonComponent(
+                            action=MessageAction(
+                                label="That's it", 
+                                text="that's it"
+                            )
+                        )
+                    ]
+                )
+            )
+            bubbles.append(bubble)
+        
+        return FlexSendMessage(alt_text='IE125 reserve carousel', contents=CarouselContainer(contents=bubbles))
 
     def display(self):
         total = 0
         product_box_comp = []
-        print(self.bucket())
 
         for datetime, value in self.bucket().items():
             #print(datetime, value)
@@ -91,4 +131,71 @@ class Cart(object):
                     ]
                 )
                 )
-        return cart_bubble(box=product_box_comp, total=total).gen_cart_bubble()
+        bubble = BubbleContainer(
+            direction='ltr',
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text=f"Here is your order:",
+                                        size='md', wrap=True),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=product_box_comp
+                    ),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=[
+                            BoxComponent(
+                                layout='horizontal',
+                                contents=[
+                                    TextComponent(text='Total',
+                                                    size='sm', color='#555555', flex=0),
+                                    TextComponent(text=f'NT$ {total}',
+                                                    size='sm', color='#111111', align='end')
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            ),
+            footer=BoxComponent(
+                layout='vertical',
+                spacing='md',
+                contents=[
+                    ButtonComponent(
+                        style='primary',
+                        color='#1DB446',
+                        action=PostbackAction(label='Checkout',
+                                                display_text='checkout',
+                                                data='action=checkout')
+                    ),
+                    BoxComponent(
+                        layout='horizontal',
+                        spacing='md',
+                        contents=[
+                            ButtonComponent(
+                                style='primary',
+                                color='#aaaaaa',
+                                action=MessageAction(label='Empty Cart',
+                                                        text='empty cart')
+                            ),
+                            ButtonComponent(
+                                style='primary',
+                                color='#aaaaaa',
+                                flex=2,
+                                action=MessageAction(label='Add',
+                                                        text='add')
+                            )
+                        ]
+                    )
+                ]
+            )
+        ) 
+
+        return FlexSendMessage(alt_text='Cart', contents=bubble)

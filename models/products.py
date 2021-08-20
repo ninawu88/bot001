@@ -1,12 +1,11 @@
 # import library
 from sqlalchemy import Column, Integer, String
-from linebot.models import FlexSendMessage, CarouselContainer
+from linebot.models import *
 from database import Base, db_session # should be executed at the root package
+from urllib.parse import quote
 
 # custom package
 import config
-from msg.json_msg import product_bubble
-
 
 class Products(Base):
     # class attr
@@ -28,12 +27,76 @@ class Products(Base):
 
         bubbles = []
         for product in products:
-            bubble = product_bubble(product=product, datetime=datetime).gen_product_bubble()
+            uri_action = URIAction(
+                    label='Enter Amount', 
+                    uri=f"https://line.me/R/oaMessage/{config.Bot_ID}/?" + 
+                        quote(f"Product:\n{product.name}\nDatetime:\n{datetime}\nI'd like to order:\n(Pls type in number)\n")
+                        )   
+            datetimepicker = DatetimePickerAction(
+                            label="Date and Time",
+                            data='DatetimePickerAction:cart_datetime',
+                            mode='datetime',
+                            #initial=,
+                            #max=,
+                            #min=
+                            )
+            bubble = BubbleContainer(
+                hero=ImageComponent(
+                    size="full",
+                    aspect_ratio="20:13",
+                    aspect_mode="cover",
+                    url=product.image_url
+                ),
+                body=BoxComponent(
+                    layout="vertical",
+                    spacing="sm",
+                    contents=[
+                        TextComponent(
+                            text=product.name,
+                            wrap=True,
+                            weight="bold",
+                            size="xl"),
+                        BoxComponent(
+                            layout="baseline",
+                            contents=[
+                                TextComponent(
+                                    text=f"NT${product.price}",
+                                    wrap=True,
+                                    weight='bold',
+                                    size= "xl",
+                                    flex=0
+                                )
+                            ]
+                        ),
+                        TextComponent(
+                            margin='md',
+                            text=f"{product.desc or ''} @ {datetime}",
+                            wrap=True,
+                            size='xs',
+                            color='#aaaaaa'
+                        )
+                    ]
+                ),
+                footer=BoxComponent(
+                    layout="vertical",
+                    spacing="sm",
+                    contents=[
+                        ButtonComponent(
+                            style="primary",
+                            color='#1DB446',
+                            action=uri_action
+                        ),
+                        ButtonComponent(
+                            style="primary",
+                            color='#1DB446',
+                            action=datetimepicker
+                        ),
+                    ]
+                )
+            )
             bubbles.append(bubble)
-            #print(bubble)
         
-        msg = FlexSendMessage(alt_text='IE125 product carousel', contents=CarouselContainer(contents=bubbles))
-        return msg
+        return FlexSendMessage(alt_text='IE125 product carousel', contents=CarouselContainer(contents=bubbles))
 
 
 product_lst = [Products(name='IE125_carstuff', 
