@@ -2,6 +2,7 @@ from typing import Text
 from sqlalchemy import Column, DateTime, String, Integer, func, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from linebot.models import *
+from sqlalchemy.sql.expression import text
 from database import Base
 
 class Orders(Base):
@@ -36,7 +37,7 @@ class Orders(Base):
             )
             )
         
-        BubbleContainer(
+        bubble = BubbleContainer(
             direction='ltr',
             body=BoxComponent(
                 layout='vertical',
@@ -65,10 +66,26 @@ class Orders(Base):
                         layout='vertical',
                         margin='xxl',
                         spacing='sm',
-                        contents=''
+                        contents=[
+                            BoxComponent(
+                                layout='horizontal',
+                                contents=[
+                                    TextComponent(
+                                        text='TOTAL',
+                                        size='sm',
+                                        color='#555555',
+                                        flex=0),
+                                    TextComponent(
+                                        text=f'NT${self.amount}',
+                                        size='sm',
+                                        color='#111111',
+                                        align='end')    
+                                ]
+                            )
+                        ]
                     )
                 ]
             )
         )
 
-
+        return FlexSendMessage(alt_text='receipt', contents=bubble)

@@ -153,10 +153,10 @@ def handle_message(event):
         if product and num_item and num_item != '0' and num_item.isdigit():
             # after certain timeout, the cache will be dropped
             if cart.bucket() == None:
-                print('reset cache')
+                #print('reset cache')
                 cart.reset()
             cart.add(datetime=datetime, product=product_name, num=num_item)
-            print(cart.bucket().items())
+            #print(cart.bucket().items())
             msg_reply = cart.reserve()
         else:
             reselect_confirm_template = ConfirmTemplate(
@@ -205,7 +205,7 @@ def handle_postback(event):
         total = 0
         items = []
         for time, value in cart.bucket().items():
-            print(strptime(time), type(strptime(time)))
+            #print(strptime(time), type(strptime(time)))
             for product_name, num in value.items():
                 product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
                 item = Items(product_id=product.id,
