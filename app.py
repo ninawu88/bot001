@@ -5,10 +5,12 @@
 # pip3 install SQLAlchemy==1.4.20
 # pip3 install SQLAlchemy-Utils
 # pip3 install alembic
+# pip3 install flask-restful
 
 # import library 
 import types
 from flask import Flask, request, abort, render_template
+from flask_restful import Api, Resource, reqparse
 
 from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
@@ -31,9 +33,11 @@ from models.cart import Cart
 from models.order import Orders
 from models.item import Items
 from models.linepay import LinePay
-
+import resources_cls
 
 app = Flask(__name__)
+api = Api(app)
+api.add_resource(resources_cls.test, '/test')
 
 # add new method to the scoped session instance 
 db_session.get_or_create_user = types.MethodType(utils.get_or_create_user, db_session)
@@ -269,4 +273,4 @@ def handle_unfollow(event):
 
 if __name__ == "__main__":
     db_session.init_products()
-    app.run() # one web request is a thread 
+    app.run(debug=True) # one web request is a thread 
