@@ -27,3 +27,6 @@ LINE_PAY_SECRET = os.environ.get('LINE_PAY_SECRET')
 PAY_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/request'
 CONFIRM_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/{}/confirm'
 STORE_IMAGE_URL = 'https://i.imgur.com/HvJQ4qL.png'
+
+# liff
+LIFF_LINEPAY = 'https://liff.line.me/1656118882-gGKlpBvr'

@@ -9,7 +9,7 @@
 
 # import library 
 import types
-from flask import Flask, request, abort, render_template
+from flask import Flask, request, abort, render_template, redirect
 from flask_restful import Api, Resource, reqparse
 
 from linebot.exceptions import (
@@ -83,6 +83,13 @@ def confirm():
         config.line_bot_api.push_message(to=order.user_id, messages=msg)
 
         return '<h1>Your payment is successful. Thx for your purchase.</h1>'
+
+
+@app.route("/liffpay", methods=['GET'])
+def liff_linepay():
+    redirect_url = request.args.get('liff.state').split('redirect_url=')[-1]
+ 
+    return redirect(redirect_url)
 
 
 @app.route("/callback", methods=['POST'])
@@ -238,7 +245,9 @@ def handle_postback(event):
         db_session.commit()
         msg_reply = TemplateSendMessage(alt_text='Thx. Pls go ahead to the payment.',
                                         template=ButtonsTemplate(text='Thx. Pls go ahead to the payment.',
-                                                                actions=[URIAction(label='Pay NT${}'.format(order.amount), uri=pay_web_url)]
+                                                                actions=[URIAction(label='Pay NT${}'.format(order.amount), 
+                                                                                    uri=f'{config.LIFF_LINEPAY}?redirect_url={pay_web_url}')
+                                                                                    ]
                                                                 )
                                                                 )
         config.line_bot_api.reply_message(event.reply_token, [msg_reply])
