@@ -11,7 +11,6 @@
 import types
 from flask import Flask, request, abort, render_template, redirect
 from flask_restful import Api, Resource, reqparse
-
 from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
 )
@@ -39,8 +38,8 @@ from models.linepay import LinePay
 import resources_cls
 
 app = Flask(__name__)
-api = Api(app)
-api.add_resource(resources_cls.test, '/test')
+yes_api = Api(app)
+yes_api.add_resource(resources_cls.test, '/test')
 
 # add new method to the scoped session instance 
 db_session.get_or_create_user = types.MethodType(utils.get_or_create_user, db_session)
@@ -202,17 +201,26 @@ def handle_postback(event):
     if action == 'checkout':
         user_id = event.source.user_id
         cart = Cart(user_id=user_id)
+
         if not cart.bucket():
             msg_reply = TextSendMessage(text='Your cart is empty now.')
             config.line_bot_api.reply_message(
                         event.reply_token,
                         [msg_reply])
             return 'OK'
-        order_id = uuid.uuid4().hex
+        
+        order_id = str(uuid.uuid4())
         total = 0
         items = []
+        packages = []
         for time, value in cart.bucket().items():
             #print(strptime(time), type(strptime(time)))
+            package = {
+                    "id": f"product-{config.packageID_gen.next()}",
+                    "amount": 0,
+                    "name": "Sample package",
+                    "products": []
+                }
             for product_name, num in value.items():
                 product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
                 item = Items(product_id=product.id,
@@ -222,9 +230,23 @@ def handle_postback(event):
                             quantity=int(num),
                             order_id=order_id
                             )
+                package_product={
+                    "id": f"{product.id}",
+                    "name": f"{product.name}",
+                    "imageUrl": f"{product.image_url}",
+                    "quantity": int(num),
+                    "price": product.price
+                }
                 items.append(item)
+                package["products"].append(package_product)
+                package["amount"] += product.price * int(num)
                 total += product.price * int(num)
+            
+            packages.append(package)
+
+        # empty cart
         cart.reset()
+        
         line_pay = LinePay()
         info = line_pay.pay(product_name='Fun2Go',
                             amount=total,

@@ -24,9 +24,13 @@ db_path = 'sqlite:///' + f'{os.path.dirname(__file__)}/linebot.db'
 # linepay
 LINE_PAY_ID = os.environ.get('LINE_PAY_ID')
 LINE_PAY_SECRET = os.environ.get('LINE_PAY_SECRET')
-PAY_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/request'
-CONFIRM_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/{}/confirm'
-STORE_IMAGE_URL = 'https://i.imgur.com/HvJQ4qL.png'
+#PAY_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/request'
+#CONFIRM_API_URL = 'https://sandbox-api-pay.line.me/v2/payments/{}/confirm'
+#STORE_IMAGE_URL = 'https://i.imgur.com/HvJQ4qL.png'
 
 # liff
 LIFF_LINEPAY = 'https://liff.line.me/1656118882-gGKlpBvr'
+
+# generator
+len = 10**10
+packageID_gen = (i for i in range(len))
