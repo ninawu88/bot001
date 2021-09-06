@@ -84,11 +84,24 @@ def confirm():
         return '<h1>Your payment is successful. Thx for your purchase.</h1>'
 
 
+# https://rvproxy.fun2go.energy/cancel
+@app.route("/cancel")
+def cancel():
+        return '<h1>Your payment is failed.</h1>'
+
+
 @app.route("/liffpay", methods=['GET'])
-def liff_linepay():
+def liffpay():
     redirect_url = request.args.get('liff.state').split('redirect_url=')[-1]
- 
     return redirect(redirect_url)
+
+
+@app.route("/liffpay_req", methods=['GET'])
+def liffpay_req():
+    result = dict(parse_qsl(request.args.get('liff.state')))
+    result['paymentAccessToken'] = result.pop('?paymentAccessToken')
+    print(result)
+    return render_template("linepay_request.html", result=result)
 
 
 @app.route("/callback", methods=['POST'])
@@ -213,10 +226,11 @@ def handle_postback(event):
         total = 0
         items = []
         packages = []
+        package_count = 0
         for time, value in cart.bucket().items():
             #print(strptime(time), type(strptime(time)))
             package = {
-                    "id": f"product-{config.packageID_gen.next()}",
+                    "id": f"product-{order_id}-{package_count}",
                     "amount": 0,
                     "name": "Sample package",
                     "products": []
@@ -243,15 +257,16 @@ def handle_postback(event):
                 total += product.price * int(num)
             
             packages.append(package)
+            package_count += 1
 
         # empty cart
         cart.reset()
         
         line_pay = LinePay()
-        info = line_pay.pay(product_name='Fun2Go',
+        info = line_pay.pay(
                             amount=total,
                             order_id=order_id,
-                            product_image_url=config.STORE_IMAGE_URL)
+                            packages=packages)
         #print(info)
         pay_web_url = info['paymentUrl']['web']
         #print(pay_web_url)

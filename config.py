@@ -30,7 +30,4 @@ LINE_PAY_SECRET = os.environ.get('LINE_PAY_SECRET')
 
 # liff
 LIFF_LINEPAY = 'https://liff.line.me/1656118882-gGKlpBvr'
-
-# generator
-len = 10**10
-packageID_gen = (i for i in range(len))
+LIFF_LINEPAY_REQ = 'https://liff.line.me/1656118882-RWMrlNJO'
