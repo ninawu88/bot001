@@ -38,15 +38,19 @@ from models.linepay import LinePay
 import resources_cls
 
 app = Flask(__name__)
+
+##======================API==================================
 yes_api = Api(app)
 yes_api.add_resource(resources_cls.test, '/test')
 
+##======================DB==================================
 # add new method to the scoped session instance 
 db_session.get_or_create_user = types.MethodType(utils.get_or_create_user, db_session)
 db_session.init_products = types.MethodType(utils.init_products, db_session)
 """ print(dir(db_session))
 print(dir(db_session())) """
 
+##======================Flask App==================================
 # an “on request end” event
 # automatically remove database sessions at the end of the request 
 # or when the application shuts down
@@ -54,7 +58,7 @@ print(dir(db_session())) """
 def shutdown_session(exception=None):
     db_session.remove()
 
-
+##======================Route==================================
 @app.route("/", methods=['GET', 'POST'])
 def index():
     # render the file under /templates
@@ -122,6 +126,7 @@ def callback():
     return 'OK'
 
 
+##======================Handle msg==================================
 @config.handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     #try:
@@ -199,6 +204,13 @@ def handle_message(event):
             TextSendMessage(text='''If you would like to see the products in your cart, please type: "my cart" or "cart"''')
         ]
 
+    if msg_text == 'my location':
+        msg_reply = TextSendMessage(
+                        text='Share your location by clicking the button below',
+                        quick_reply=QuickReply(items=[QuickReplyButton(
+                                                        action=LocationAction(label='mylocation'))
+                        ])
+                    )
     config.line_bot_api.reply_message(
         event.reply_token,
         msg_reply)
@@ -207,6 +219,7 @@ def handle_message(event):
         print(f'err: {e}') """
 
 
+##======================Handle Postback==================================
 @config.handler.add(PostbackEvent)
 def handle_postback(event):
     data = dict(parse_qsl(event.postback.data))
