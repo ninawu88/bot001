@@ -1,6 +1,7 @@
 # pip3 install python-dotenv
 
 import os
+import logging
 from dotenv import load_dotenv
 from linebot import (
     LineBotApi, WebhookHandler
@@ -31,3 +32,12 @@ LINE_PAY_SECRET = os.environ.get('LINE_PAY_SECRET')
 # liff
 LIFF_LINEPAY = 'https://liff.line.me/1656118882-gGKlpBvr'
 LIFF_LINEPAY_REQ = 'https://liff.line.me/1656118882-RWMrlNJO'
+
+# logger
+logger = logging.getLogger("linebot")
+logger.setLevel(logging.DEBUG)
+sh = logging.StreamHandler()
+logger.addHandler(sh)
+formatter = logging.Formatter(
+    '%(asctime)s:%(lineno)d:%(levelname)s:%(message)s')
+sh.setFormatter(formatter)

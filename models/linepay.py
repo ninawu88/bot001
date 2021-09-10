@@ -35,26 +35,32 @@ class LinePay():
         }
 
         response = linepay_api.request(request_options) # return a dict, where the key ['info'] also holds a dict
-        return self._check_response(response)
+        return self._pay_check_response(response)
 
     def confirm(self, tx_id, amount):
-        data = json.dumps({
-                    'amount' : amount,
-                    'currency' : self.currency
-        }).encode('utf-8')
+        response = linepay_api.confirm(
+            tx_id,
+            amount,
+            self.currency
+        )
+        return self._confirm_check_response(response)
 
-        response = requests.post(config.CONFIRM_API_URL.format(tx_id), headers=self._headers(), data=data)
-
-        return self._check_response(response)
-
-    def _check_response(self, response):
+    def _pay_check_response(self, response):
         transaction_id = int(response.get("info", {}).get("transactionId", 0))
         check_result = linepay_api.check_payment_status(transaction_id)
-        print(response)
-        resp = {}
-        resp['paymentAccessToken'] = response.get("info", {}).get("paymentAccessToken", None)
-        resp['paymentUrlweb'] = response.get("info", {}).get("paymentUrl", None).get('web', None)
-        resp["transaction_id"] = transaction_id
-        resp["paymentStatusCheckReturnCode"] = check_result.get("returnCode", None)
-        resp["paymentStatusCheckReturnMessage"] = check_result.get("returnMessage", None)
-        print(f'{config.LIFF_LINEPAY_REQ}?{urlencode(resp)}')
+        config.logger.debug(check_result)
+        config.logger.debug(response.get("info"))
+        if check_result.get("returnCode") == '0000':
+            return response.get("info")
+        else:
+            raise Exception(f'{check_result.get("returnCode")}:{ check_result.get("returnMessage")}')
+
+    def _confirm_check_response(self, response):
+        transaction_id = int(response.get("info", {}).get("transactionId", 0))
+        check_result = linepay_api.check_payment_status(transaction_id)
+        config.logger.debug(check_result)
+        config.logger.debug(response.get("info"))
+        if check_result.get("returnCode") == '0123':
+            return response.get("info")
+        else:
+            raise Exception(f'{check_result.get("returnCode")}:{ check_result.get("returnMessage")}')

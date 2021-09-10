@@ -1,5 +1,5 @@
 from typing import Text
-from sqlalchemy import Column, DateTime, String, Integer, func, Boolean, ForeignKey
+from sqlalchemy import Column, DateTime, String, Integer, func, Boolean, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from linebot.models import *
 from sqlalchemy.sql.expression import text
@@ -9,8 +9,8 @@ class Orders(Base):
     __tablename__= 'orders'
 
     id = Column(String, primary_key=True)
-    amount = Column(Integer)
-    tx_id = Column(String)
+    amount = Column(Float)
+    tx_id = Column(Integer)
     is_pay = Column(Boolean, default=False)
     created_time = Column(DateTime, default=func.now())
     user_id = Column("user_id", ForeignKey("users.id")) # Foreignkey(table_name.column_name)

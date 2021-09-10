@@ -69,12 +69,13 @@ def index():
 # https://rvproxy.fun2go.energy/confirm
 @app.route("/confirm")
 def confirm():
-    tx_id = request.args.get('transactionId')
+    config.logger.debug(request.args)
+    tx_id = int(request.args.get('transactionId'))
     order = db_session.query(Orders).filter(Orders.tx_id == tx_id).first()
 
     if order:
         line_pay = LinePay()
-        line_pay.confirm(tx_id=tx_id, amount=order.amount)
+        line_pay.confirm(tx_id=int(tx_id), amount=float(order.amount))
         order.is_pay = True
         db_session.commit()
 
@@ -230,7 +231,7 @@ def handle_postback(event):
         for time, value in cart.bucket().items():
             #print(strptime(time), type(strptime(time)))
             package = {
-                    "id": f"product-{order_id}-{package_count}",
+                    "id": f"{order_id}-{package_count}",
                     "amount": 0,
                     "name": "Sample package",
                     "products": []
