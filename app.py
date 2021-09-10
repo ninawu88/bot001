@@ -11,7 +11,6 @@
 import types
 from flask import Flask, request, abort, render_template, redirect
 from flask_restful import Api, Resource, reqparse
-
 from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
 )
@@ -39,15 +38,19 @@ from models.linepay import LinePay
 import resources_cls
 
 app = Flask(__name__)
-api = Api(app)
-api.add_resource(resources_cls.test, '/test')
 
+##======================API==================================
+yes_api = Api(app)
+yes_api.add_resource(resources_cls.test, '/test')
+
+##======================DB==================================
 # add new method to the scoped session instance 
 db_session.get_or_create_user = types.MethodType(utils.get_or_create_user, db_session)
 db_session.init_products = types.MethodType(utils.init_products, db_session)
 """ print(dir(db_session))
 print(dir(db_session())) """
 
+##======================Flask App==================================
 # an “on request end” event
 # automatically remove database sessions at the end of the request 
 # or when the application shuts down
@@ -55,7 +58,7 @@ print(dir(db_session())) """
 def shutdown_session(exception=None):
     db_session.remove()
 
-
+##======================Route==================================
 @app.route("/", methods=['GET', 'POST'])
 def index():
     # render the file under /templates
@@ -70,12 +73,13 @@ def index():
 # https://rvproxy.fun2go.energy/confirm
 @app.route("/confirm")
 def confirm():
-    tx_id = request.args.get('transactionId')
+    config.logger.debug(request.args)
+    tx_id = int(request.args.get('transactionId'))
     order = db_session.query(Orders).filter(Orders.tx_id == tx_id).first()
 
     if order:
         line_pay = LinePay()
-        line_pay.confirm(tx_id=tx_id, amount=order.amount)
+        line_pay.confirm(tx_id=int(tx_id), amount=float(order.amount))
         order.is_pay = True
         db_session.commit()
 
@@ -85,11 +89,24 @@ def confirm():
         return '<h1>Your payment is successful. Thx for your purchase.</h1>'
 
 
+# https://rvproxy.fun2go.energy/cancel
+@app.route("/cancel")
+def cancel():
+        return '<h1>Your payment is failed.</h1>'
+
+
 @app.route("/liffpay", methods=['GET'])
-def liff_linepay():
+def liffpay():
     redirect_url = request.args.get('liff.state').split('redirect_url=')[-1]
- 
     return redirect(redirect_url)
+
+
+@app.route("/liffpay_req", methods=['GET'])
+def liffpay_req():
+    result = dict(parse_qsl(request.args.get('liff.state')))
+    result['paymentAccessToken'] = result.pop('?paymentAccessToken')
+    print(result)
+    return render_template("linepay_request.html", result=result)
 
 
 @app.route("/callback", methods=['POST'])
@@ -109,6 +126,7 @@ def callback():
     return 'OK'
 
 
+##======================Handle msg==================================
 @config.handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     #try:
@@ -186,6 +204,13 @@ def handle_message(event):
             TextSendMessage(text='''If you would like to see the products in your cart, please type: "my cart" or "cart"''')
         ]
 
+    if msg_text == 'my location':
+        msg_reply = TextSendMessage(
+                        text='Share your location by clicking the button below',
+                        quick_reply=QuickReply(items=[QuickReplyButton(
+                                                        action=LocationAction(label='mylocation'))
+                        ])
+                    )
     config.line_bot_api.reply_message(
         event.reply_token,
         msg_reply)
@@ -194,6 +219,7 @@ def handle_message(event):
         print(f'err: {e}') """
 
 
+##======================Handle Postback==================================
 @config.handler.add(PostbackEvent)
 def handle_postback(event):
     data = dict(parse_qsl(event.postback.data))
@@ -202,17 +228,27 @@ def handle_postback(event):
     if action == 'checkout':
         user_id = event.source.user_id
         cart = Cart(user_id=user_id)
+
         if not cart.bucket():
             msg_reply = TextSendMessage(text='Your cart is empty now.')
             config.line_bot_api.reply_message(
                         event.reply_token,
                         [msg_reply])
             return 'OK'
-        order_id = uuid.uuid4().hex
+        
+        order_id = str(uuid.uuid4())
         total = 0
         items = []
+        packages = []
+        package_count = 0
         for time, value in cart.bucket().items():
             #print(strptime(time), type(strptime(time)))
+            package = {
+                    "id": f"{order_id}-{package_count}",
+                    "amount": 0,
+                    "name": "Sample package",
+                    "products": []
+                }
             for product_name, num in value.items():
                 product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
                 item = Items(product_id=product.id,
@@ -222,14 +258,29 @@ def handle_postback(event):
                             quantity=int(num),
                             order_id=order_id
                             )
+                package_product={
+                    "id": f"{product.id}",
+                    "name": f"{product.name}",
+                    "imageUrl": f"{product.image_url}",
+                    "quantity": int(num),
+                    "price": product.price
+                }
                 items.append(item)
+                package["products"].append(package_product)
+                package["amount"] += product.price * int(num)
                 total += product.price * int(num)
+            
+            packages.append(package)
+            package_count += 1
+
+        # empty cart
         cart.reset()
+        
         line_pay = LinePay()
-        info = line_pay.pay(product_name='Fun2Go',
+        info = line_pay.pay(
                             amount=total,
                             order_id=order_id,
-                            product_image_url=config.STORE_IMAGE_URL)
+                            packages=packages)
         #print(info)
         pay_web_url = info['paymentUrl']['web']
         #print(pay_web_url)
