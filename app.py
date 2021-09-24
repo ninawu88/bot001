@@ -35,6 +35,7 @@ from models.products import Products
 from models.cart import Cart
 from models.order import Orders
 from models.item import Items
+from models.binder import Binders
 from models.linepay import LinePay
 import resources_cls
 
@@ -233,7 +234,7 @@ def handle_message(event):
                     uri=f"https://line.me/R/oaMessage/{config.Bot_ID}/?" + 
                         quote(f"chargedata\nlicensePlate:\n(Pls type in plate number)\n")
                         )
-        #CameraAction(label='Open camera')
+
         msg_reply = TextSendMessage(
                         text='Which status?',
                         quick_reply=QuickReply(items=[
@@ -242,7 +243,7 @@ def handle_message(event):
                         ])
                     )   
 
-    elif ('usingmotor' or 'chargedata' in msg_text) and ('licenseplate' in msg_text):
+    elif (any([s in msg_text for s in ('usingmotor', 'chargedata')])) and ('licenseplate' in msg_text):
         yes_api = msg_text.split('\n')[0]
         licensePlate = msg_text.split('\n')[-1]
         config.logger.debug(licensePlate)
@@ -269,6 +270,34 @@ def handle_message(event):
                                                         action=LocationAction(label='mylocation'))
                         ])
                     )
+
+    if 'binder' in msg_text:
+        msg_reply = TemplateSendMessage(alt_text='Bind your Line account to a License plate',
+                                        template=ButtonsTemplate(text='Bind your Line account to a License plate',
+                                                                actions=[URIAction(label='Type plate number', 
+                                                                                    uri=f"https://line.me/R/oaMessage/{config.Bot_ID}/?" + 
+                                                                                        quote(f"Bind to licensePlate:\n(Pls type in plate number, only characters allowed)\n")
+                                                    )
+                                                ]
+                                            )
+                                        )
+    elif all([s in msg_text for s in ('bind', 'licenseplate')]): 
+        licensePlate = msg_text.split('\n')[-1]
+        if licensePlate in plates:
+            bind_confirm_template = ConfirmTemplate(
+                text=f'Bind with License Plate:\n{licensePlate.upper()}',
+                actions=[
+                    PostbackAction(
+                        label="Confirm",
+                        data=f"action=bind&licensePlate={licensePlate}&userId={user_id}"
+                    ),
+                    MessageAction(label="Re-Type", text="Binder"),
+                ])
+            msg_reply = TemplateSendMessage(alt_text=f'Bind with License Plate:\n{licensePlate}', template=bind_confirm_template)
+        else:
+            msg_reply = TextSendMessage(text='The License Plate does not exist, please check again')
+
+
     config.line_bot_api.reply_message(
         event.reply_token,
         msg_reply)
@@ -379,7 +408,7 @@ def handle_postback(event):
         except AttributeError as e:
             print(e)
 
-    if api == 'usingmotor' or 'chargedata':
+    if any([s == api for s in ('usingmotor', 'chargedata')]):
         payload = {}
         for key in data.keys():
             if key != "api":
@@ -390,6 +419,14 @@ def handle_postback(event):
 
         resp = requests.post(config.yes_api_base + api, json=payload)      
         config.logger.debug(resp.text)
+
+    if action == 'bind':
+        licensePlate = data.get('licensePlate')
+        user_id = data.get('userId')
+        binder = Binders(plate=licensePlate, user_id=user_id)
+        db_session.add(binder)
+        db_session.commit()
+        config.logger.debug((licensePlate, user_id))
 
 
 @config.handler.add(FollowEvent)

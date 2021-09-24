@@ -15,6 +15,7 @@ class Users(Base):
     orders = relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
     # user.orders
     # order.user, for backref
+    binders = relationship('Binders', backref='user') # relationship(cls_name, backref='var_name')
     
     """ # instance attr
     # without init, one could use argument to modify the class attr. ex. Users(id='123')
