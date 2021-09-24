@@ -1,16 +1,17 @@
 from sqlalchemy_utils import database_exists
-from models.products import Products, product_lst
+from models.products import product_lst
+from models.scooters import scooter_lst
 from models.users import Users
 from database import Base, engine
 
 import config
 
 
-def init_products(self):
+def init_tables(self):
     result = init_db()
     if result:
-        init_data = product_lst
-        self.bulk_save_objects(init_data) # a way to insert many query
+        self.bulk_save_objects(product_lst) # a way to insert many query
+        self.bulk_save_objects(scooter_lst)
         self.commit()
 
     #print(self.query(Products).all())

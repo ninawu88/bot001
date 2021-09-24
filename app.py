@@ -48,7 +48,7 @@ yes_api.add_resource(resources_cls.test, '/test')
 ##======================DB==================================
 # add new method to the scoped session instance 
 db_session.get_or_create_user = types.MethodType(utils.get_or_create_user, db_session)
-db_session.init_products = types.MethodType(utils.init_products, db_session)
+db_session.init_tables = types.MethodType(utils.init_tables, db_session)
 """ print(dir(db_session))
 print(dir(db_session())) """
 
@@ -445,5 +445,5 @@ def handle_unfollow(event):
 
 
 if __name__ == "__main__":
-    db_session.init_products()
+    db_session.init_tables()
     app.run(debug=True) # one web request is a thread 
