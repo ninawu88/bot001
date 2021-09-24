@@ -1,5 +1,3 @@
-import json
-import requests
 from flask import url_for, render_template, redirect
 from urllib.parse import parse_qsl, urlencode
 from linepay import LinePayApi

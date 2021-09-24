@@ -7,7 +7,6 @@ from linebot import (
     LineBotApi, WebhookHandler
 )
 
-
 load_dotenv()
 
 # linebot msg api 
@@ -41,3 +40,6 @@ logger.addHandler(sh)
 formatter = logging.Formatter(
     '%(asctime)s:%(lineno)d:%(levelname)s:%(message)s')
 sh.setFormatter(formatter)
+
+# api 
+yes_api_base = "http://13.114.106.45:8088/api/"

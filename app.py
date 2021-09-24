@@ -9,6 +9,7 @@
 
 # import library 
 import types
+import requests
 from flask import Flask, request, abort, render_template, redirect
 from flask_restful import Api, Resource, reqparse
 from linebot.exceptions import (
@@ -49,6 +50,21 @@ db_session.get_or_create_user = types.MethodType(utils.get_or_create_user, db_se
 db_session.init_products = types.MethodType(utils.init_products, db_session)
 """ print(dir(db_session))
 print(dir(db_session())) """
+
+##======================Temp Var==================================
+plates = [
+    'epa0277',
+    'epa0278',
+    'epa0279',
+    'epa0280',
+    'epa0281',
+    'epa0282',
+    'epa0283',
+    'epa0285',
+    'epa0286',
+    'epa0276',
+    ]
+
 
 ##======================Flask App==================================
 # an “on request end” event
@@ -197,14 +213,56 @@ def handle_message(event):
     elif 'processing' in msg_text:
         msg_reply = TextSendMessage(text="On the way")
 
-    if (msg_reply is None): 
+    elif (msg_reply is None): 
         msg_reply = [
             #TextSendMessage(text='''若要將商品加入購物車，請傳送訊息: 加入購物車\n若要顯示您的購物車，請傳送訊息: 我的購物車'''),
             TextSendMessage(text='''If you would like to add the product to the cart, please type: "time" or "date"'''),
             TextSendMessage(text='''If you would like to see the products in your cart, please type: "my cart" or "cart"''')
         ]
 
-    if msg_text == 'my location':
+
+    if 'status' in msg_text:
+        usingmotor = URIAction(
+                    label='usingmotor', 
+                    uri=f"https://line.me/R/oaMessage/{config.Bot_ID}/?" + 
+                        quote(f"usingmotor\nlicensePlate:\n(Pls type in plate number)\n")
+                        )
+
+        chargedata = URIAction(
+                    label='chargedata', 
+                    uri=f"https://line.me/R/oaMessage/{config.Bot_ID}/?" + 
+                        quote(f"chargedata\nlicensePlate:\n(Pls type in plate number)\n")
+                        )
+        #CameraAction(label='Open camera')
+        msg_reply = TextSendMessage(
+                        text='Which status?',
+                        quick_reply=QuickReply(items=[
+                            QuickReplyButton(action=usingmotor),
+                            QuickReplyButton(action=chargedata),
+                        ])
+                    )   
+
+    elif ('usingmotor' or 'chargedata' in msg_text) and ('licenseplate' in msg_text):
+        yes_api = msg_text.split('\n')[0]
+        licensePlate = msg_text.split('\n')[-1]
+        config.logger.debug(licensePlate)
+
+        if licensePlate in plates:
+            plate_confirm_template = ConfirmTemplate(
+                text=f'Process {yes_api} with License Plate:\n{licensePlate}',
+                actions=[
+                    PostbackAction(
+                        label="Confirm",
+                        data=f"api={yes_api}&licensePlate={licensePlate}"
+                    ),
+                    MessageAction(label="Re-Type", text="Status"),
+                ])
+            msg_reply = TemplateSendMessage(alt_text=f'Process {yes_api} with License Plate: {licensePlate}', template=plate_confirm_template)
+        else:
+            msg_reply = TextSendMessage(text='The License Plate does not exist, please check again')
+    
+
+    if 'my location' in msg_text:
         msg_reply = TextSendMessage(
                         text='Share your location by clicking the button below',
                         quick_reply=QuickReply(items=[QuickReplyButton(
@@ -224,6 +282,8 @@ def handle_message(event):
 def handle_postback(event):
     data = dict(parse_qsl(event.postback.data))
     action = data.get('action')
+    api = data.get('api')
+    config.logger.debug(data)
     
     if action == 'checkout':
         user_id = event.source.user_id
@@ -302,7 +362,7 @@ def handle_postback(event):
                                                                 )
                                                                 )
         config.line_bot_api.reply_message(event.reply_token, [msg_reply])
-        return 'OK'
+        return 'OK'   
 
     if 'cart_datetime' in event.postback.data:
         if 'DatetimePickerAction' in event.postback.data:
@@ -318,6 +378,18 @@ def handle_postback(event):
                         msg_reply)
         except AttributeError as e:
             print(e)
+
+    if api == 'usingmotor' or 'chargedata':
+        payload = {}
+        for key in data.keys():
+            if key != "api":
+                payload[key] = data.get(key)
+        if payload.get('licensePlate'):
+            payload['licensePlate'] = payload.get('licensePlate').upper()
+        config.logger.debug(payload)
+
+        resp = requests.post(config.yes_api_base + api, json=payload)      
+        config.logger.debug(resp.text)
 
 
 @config.handler.add(FollowEvent)
