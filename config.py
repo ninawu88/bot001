@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from linebot import (
     LineBotApi, WebhookHandler
 )
+from flask_marshmallow import Marshmallow
 
 load_dotenv()
 
@@ -43,3 +44,6 @@ sh.setFormatter(formatter)
 
 # api 
 yes_api_base = "http://13.114.106.45:8088/api/"
+
+# mashamallow
+mama = Marshmallow()

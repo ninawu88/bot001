@@ -42,8 +42,8 @@ import resources_cls
 app = Flask(__name__)
 
 ##======================API==================================
-yes_api = Api(app)
-yes_api.add_resource(resources_cls.test, '/test')
+yes_post_api = Api(app)
+yes_post_api.add_resource(resources_cls.test, '/test')
 
 ##======================DB==================================
 # add new method to the scoped session instance 
@@ -446,4 +446,5 @@ def handle_unfollow(event):
 
 if __name__ == "__main__":
     db_session.init_tables()
+    config.mama.init_app(app)
     app.run(debug=True) # one web request is a thread 
