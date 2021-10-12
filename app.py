@@ -1,12 +1,3 @@
-# pip3 install flask, requests
-# pip3 install flask
-# pip3 install requests
-# pip3 install line-bot-sdk
-# pip3 install SQLAlchemy==1.4.20
-# pip3 install SQLAlchemy-Utils
-# pip3 install alembic
-# pip3 install flask-restful
-
 # import library 
 import types
 import requests
@@ -446,5 +437,4 @@ def handle_unfollow(event):
 
 if __name__ == "__main__":
     db_session.init_tables()
-    config.mama.init_app(app)
     app.run(debug=True) # one web request is a thread 

@@ -4,4 +4,7 @@
 /.env
 /*.db
 /cs50/*
-/alembic/*
+/alembic/__pycache__/*
+/alembic/versions
+/alembic/README
+/alembic/script.py.mako

@@ -1,5 +1,4 @@
 from sqlalchemy import Column, DateTime, Integer, String, func, ForeignKey
-from sqlalchemy.engine import create_engine
 from database import Base
 
 class Items(Base):
