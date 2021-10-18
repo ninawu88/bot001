@@ -1,7 +1,7 @@
 from sqlalchemy import Column, DateTime, Integer, String, Float
 from database import Base
 
-class Modem(Base):
+class Modem_750(Base):
     __tablename__ = 'modems'
 
     index = Column(Integer, primary_key=True)

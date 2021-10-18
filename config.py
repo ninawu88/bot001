@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from linebot import (
     LineBotApi, WebhookHandler
 )
+from datetime import datetime
 
 load_dotenv()
 
@@ -33,13 +34,23 @@ LIFF_LINEPAY = 'https://liff.line.me/1656118882-gGKlpBvr'
 LIFF_LINEPAY_REQ = 'https://liff.line.me/1656118882-RWMrlNJO'
 
 # logger
-logger = logging.getLogger("linebot")
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-sh = logging.StreamHandler()
-logger.addHandler(sh)
 formatter = logging.Formatter(
-    '%(asctime)s:%(lineno)d:%(levelname)s:%(message)s')
-sh.setFormatter(formatter)
+	'[%(levelname)s %(asctime)s %(module)s:%(lineno)d] %(message)s',
+	datefmt='%Y%m%d %H:%M:%S')
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(formatter)
+
+
+fh = logging.FileHandler(filename=f'linebot_{datetime.today().strftime("%Y-%m-%d")}.log', mode='w')
+fh.setLevel(logging.INFO)
+fh.setFormatter(formatter)
+
+logger.addHandler(ch)
+logger.addHandler(fh)
 
 # api 
 yes_api_base = "http://13.114.106.45:8088/api/"

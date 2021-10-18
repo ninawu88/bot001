@@ -1,7 +1,7 @@
 from marshmallow import Schema, fields
 
 # mashamallow
-ModemSchema = Schema.from_dict(
+ModemSchema_750 = Schema.from_dict(
     {'id': fields.Int(),
     'transactionId': fields.Str(), 
     'messageEncoding': fields.Str(), 
