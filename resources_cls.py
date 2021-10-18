@@ -37,6 +37,7 @@ class test(Resource):
         msg_id = data['messageId']
         if msg_id == '750':
             db_session.add(Modem_750(**ModemSchema_750.load(data)))
+            config.logger.info(data)
         elif msg_id == '275':
             config.logger.info('Format_275')
             config.logger.info(data)
