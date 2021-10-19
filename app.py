@@ -1,5 +1,4 @@
 # import library 
-import types
 import requests
 from flask import Flask, request, abort, render_template, redirect
 from flask_restful import Api, Resource, reqparse
@@ -7,6 +6,8 @@ from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
 )
 from linebot.models import *
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy_utils import database_exists
 from urllib.parse import quote, parse_qsl
 import uuid
 from datetime import datetime
@@ -19,10 +20,9 @@ def strptime(time):
 
 # import custom module
 import config
-import utils
-from database import db_session
 from models.users import Users
-from models.products import Products
+from models.products import Products, product_lst
+from models.scooters import scooter_lst
 from models.cart import Cart
 from models.order import Orders
 from models.item import Items
@@ -30,18 +30,46 @@ from models.binder import Binders
 from models.linepay import LinePay
 import resources_cls
 
-app = Flask(__name__)
 
+app = Flask(__name__)
+##======================SQL==================================
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = config.db_path
+db = SQLAlchemy(app)
 ##======================API==================================
 yes_post_api = Api(app)
 yes_post_api.add_resource(resources_cls.test, '/test')
 
 ##======================DB==================================
 # add new method to the scoped session instance 
-db_session.get_or_create_user = types.MethodType(utils.get_or_create_user, db_session)
-db_session.init_tables = types.MethodType(utils.init_tables, db_session)
-""" print(dir(db_session))
-print(dir(db_session())) """
+def init_tables():
+    result = init_db()
+    if result:
+        db.session.add_all(product_lst) # a way to insert many query
+        db.session.add_all(scooter_lst)
+        db.session.commit()
+
+
+def init_db():
+    if database_exists(config.db_path):
+        return False
+    else:    
+        db.create_all()
+        return True
+
+
+def get_or_create_user(user_id):
+    user = Users.query.filter_by(id=user_id).first()
+    #print(f'{user} in db')
+    
+    if not user:
+        profile = config.line_bot_api.get_profile(user_id)
+        # insert entries into the database
+        user = Users(id=user_id, nick_name=profile.display_name, image_url=profile.picture_url)
+        db.session.add(user) # insert query
+        db.session.commit()
+        #print(f"Add {user} to db")
+    return user
 
 ##======================Temp Var==================================
 plates = [
@@ -56,15 +84,13 @@ plates = [
     'epa0286',
     'epa0276',
     ]
-
-
 ##======================Flask App==================================
 # an “on request end” event
 # automatically remove database sessions at the end of the request 
 # or when the application shuts down
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    db_session.remove()
+    db.session.remove()
 
 ##======================Route==================================
 @app.route("/", methods=['GET', 'POST'])
@@ -83,13 +109,13 @@ def index():
 def confirm():
     config.logger.debug(request.args)
     tx_id = int(request.args.get('transactionId'))
-    order = db_session.query(Orders).filter(Orders.tx_id == tx_id).first()
+    order = Orders.query.filter_by(tx_id=tx_id).first()
 
     if order:
         line_pay = LinePay()
         line_pay.confirm(tx_id=int(tx_id), amount=float(order.amount))
         order.is_pay = True
-        db_session.commit()
+        db.session.commit()
 
         msg = order.display_receipt()
         config.line_bot_api.push_message(to=order.user_id, messages=msg)
@@ -140,7 +166,7 @@ def handle_message(event):
     #try:
     #print(f"this is event: {event}")
     user_id = event.source.user_id
-    user = db_session.get_or_create_user(user_id=user_id)
+    user = get_or_create_user(user_id=user_id)
     cart = Cart(user_id=user_id)
     
     msg_text = str(event.message.text).lower()
@@ -182,7 +208,7 @@ def handle_message(event):
         datetime = msg_text.split('\n')[3]
         num_item = msg_text.split('\n')[-1]
         #print(product_name, num_item)
-        product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
+        product = Products.query(Products).filter(Products.name.ilike(product_name)).first()
         if product and num_item and num_item != '0' and num_item.isdigit():
             # after certain timeout, the cache will be dropped
             if cart.bucket() == None:
@@ -330,7 +356,7 @@ def handle_postback(event):
                     "products": []
                 }
             for product_name, num in value.items():
-                product = db_session.query(Products).filter(Products.name.ilike(product_name)).first()
+                product = Products.query.filter(Products.name.ilike(product_name)).first()
                 item = Items(product_id=product.id,
                             reserved_datetime=strptime(time),
                             product_name=product.name,
@@ -370,10 +396,10 @@ def handle_postback(event):
                         is_pay=False,
                         amount=total,
                         user_id=user_id)
-        db_session.add(order)
+        db.session.add(order)
         for item in items:
-            db_session.add(item)
-        db_session.commit()
+            db.session.add(item)
+        db.session.commit()
         msg_reply = TemplateSendMessage(alt_text='Thx. Pls go ahead to the payment.',
                                         template=ButtonsTemplate(text='Thx. Pls go ahead to the payment.',
                                                                 actions=[URIAction(label='Pay NT${}'.format(order.amount), 
@@ -415,14 +441,14 @@ def handle_postback(event):
         licensePlate = data.get('licensePlate')
         user_id = data.get('userId')
         binder = Binders(plate=licensePlate, user_id=user_id)
-        db_session.add(binder)
-        db_session.commit()
+        db.session.add(binder)
+        db.session.commit()
         config.logger.debug((licensePlate, user_id))
 
 
 @config.handler.add(FollowEvent)
 def handle_follow(event):
-    db_session.get_or_create_user(event.source.user_id)
+    get_or_create_user(event.source.user_id)
 
     config.line_bot_api.reply_message(
             event.reply_token,
@@ -431,10 +457,10 @@ def handle_follow(event):
 
 @config.handler.add(UnfollowEvent)
 def handle_unfollow(event):
-    unfollowing_user = db_session.get_or_create_user(event.source.user_id)
+    unfollowing_user = get_or_create_user(event.source.user_id)
     print(f'Unfollow event from {unfollowing_user}')
 
 
 if __name__ == "__main__":
-    db_session.init_tables()
+    init_tables()
     app.run(debug=True) # one web request is a thread 
