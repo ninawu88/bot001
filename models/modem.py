@@ -2,7 +2,7 @@ from sqlalchemy import Column, DateTime, Integer, String, Float
 from database import Base
 
 class Modem_750(Base):
-    __tablename__ = 'modems'
+    __tablename__ = 'modem_750'
 
     index = Column(Integer, primary_key=True)
     id = Column(Integer)
