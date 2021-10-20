@@ -1,34 +1,37 @@
 # import library 
 import requests
-from flask import Flask, request, abort, render_template, redirect
+from flask import url_for, render_template, redirect
+from flask import Flask, request, abort, render_template, redirect, url_for
 from flask_restful import Api, Resource, reqparse
 from linebot.exceptions import (
     InvalidSignatureError, LineBotApiError
 )
 from linebot.models import *
+from linepay import LinePayApi
 from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
 from sqlalchemy_utils import database_exists
 from urllib.parse import quote, parse_qsl
 import uuid
+from cachelib import SimpleCache
 from datetime import datetime
 def strptime(time):
     if 't' in time:
         return datetime.strptime(time[2:], '%y-%m-%dt%H:%M')
     else:
         return datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
-    
+def strf_datetime(dt):
+    date_args = [u for i in dt.split(',') for u in i.split(' ') if all([u != cond for cond in ['','PM','AM']])]
+    #config.logger.debug(date_args)
+    time_args = date_args[-1].split(':')
+    #config.logger.debug(time_args)
+    return str(datetime(
+                year=int(date_args[2]), month=int(datetime.strptime(date_args[0], "%b").month), day=int(date_args[1]), 
+                hour=int(time_args[0]), minute=int(time_args[1]), second=int(time_args[2]))
+                )
 
 # import custom module
 import config
-from models.users import Users
-from models.products import Products, product_lst
-from models.scooters import scooter_lst
-from models.cart import Cart
-from models.order import Orders
-from models.item import Items
-from models.binder import Binders
-from models.linepay import LinePay
-import resources_cls
 
 
 app = Flask(__name__)
@@ -36,9 +39,6 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = config.db_path
 db = SQLAlchemy(app)
-##======================API==================================
-yes_post_api = Api(app)
-yes_post_api.add_resource(resources_cls.test, '/test')
 
 ##======================DB==================================
 # add new method to the scoped session instance 
@@ -49,14 +49,12 @@ def init_tables():
         db.session.add_all(scooter_lst)
         db.session.commit()
 
-
 def init_db():
     if database_exists(config.db_path):
         return False
     else:    
         db.create_all()
         return True
-
 
 def get_or_create_user(user_id):
     user = Users.query.filter_by(id=user_id).first()
@@ -70,6 +68,618 @@ def get_or_create_user(user_id):
         db.session.commit()
         #print(f"Add {user} to db")
     return user
+
+class Users(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.String, primary_key=True)
+    nick_name = db.Column(db.String)
+    image_url = db.Column(db.String(length=256))
+    created_time = db.Column(db.DateTime, default=datetime.now())
+    
+    def __repr__(self):
+        return f'<User {self.nick_name!r}>'
+
+class Products(db.Model):
+    __tablename__ = 'products'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)
+    price = db.Column(db.Integer)
+    desc = db.Column(db.String)
+    image_url = db.Column(db.String(length=256))
+    
+    # print an instance
+    def __repr__(self):
+        return f'<Products {self.name!r}>'
+
+    @classmethod
+    def product_carousel(cls, datetime='Pls Select Date/Time'):
+        products = cls.query.all()
+
+        bubbles = []
+        for product in products:
+            uri_action = URIAction(
+                    label='Enter Amount', 
+                    uri=f"https://line.me/R/oaMessage/{config.Bot_ID}/?" + 
+                        quote(f"Product:\n{product.name}\nDatetime:\n{datetime}\nI'd like to order:\n(Pls type in number)\n")
+                        )   
+            datetimepicker = DatetimePickerAction(
+                            label="Date and Time",
+                            data='DatetimePickerAction:cart_datetime',
+                            mode='datetime',
+                            #initial=,
+                            #max=,
+                            #min=
+                            )
+            bubble = BubbleContainer(
+                hero=ImageComponent(
+                    size="full",
+                    aspect_ratio="20:13",
+                    aspect_mode="cover",
+                    url=product.image_url
+                ),
+                body=BoxComponent(
+                    layout="vertical",
+                    spacing="sm",
+                    contents=[
+                        TextComponent(
+                            text=product.name,
+                            wrap=True,
+                            weight="bold",
+                            size="xl"),
+                        BoxComponent(
+                            layout="baseline",
+                            contents=[
+                                TextComponent(
+                                    text=f"NT${product.price}",
+                                    wrap=True,
+                                    weight='bold',
+                                    size= "xl",
+                                    flex=0
+                                )
+                            ]
+                        ),
+                        TextComponent(
+                            margin='md',
+                            text=f"{product.desc or ''} @ {datetime}",
+                            wrap=True,
+                            size='xs',
+                            color='#aaaaaa'
+                        )
+                    ]
+                ),
+                footer=BoxComponent(
+                    layout="vertical",
+                    spacing="sm",
+                    contents=[
+                        ButtonComponent(
+                            style="primary",
+                            color='#1DB446',
+                            action=uri_action
+                        ),
+                        ButtonComponent(
+                            style="primary",
+                            color='#1DB446',
+                            action=datetimepicker
+                        ),
+                    ]
+                )
+            )
+            bubbles.append(bubble)
+        
+        return FlexSendMessage(alt_text='IE125 product carousel', contents=CarouselContainer(contents=bubbles))
+
+product_lst = [Products(name='IE125_carstuff', 
+                        image_url='https://img.carstuff.com.tw/images/stories/2019/Steven/12/9/emoving/1%20(2).jpg',
+                        price=600,
+                        desc='一天600元'),
+               Products(name='IE125_emoving', 
+                        image_url='https://www.e-moving.com.tw//emwspublished/N0003/LV220210527120042.png',
+                        price=700,
+                        desc='一天700元'),
+               Products(name='IE125_蝦皮', 
+                        image_url='https://cf.shopee.tw/file/abe4ffc8ac38151920239074e2f6da1a',
+                        price=800,
+                        desc='一天800元')]
+
+class Scooters(db.Model):
+    __tablename__ = 'scooters'
+    id = db.Column(db.Integer, primary_key=True)
+    license_plate = db.Column(db.String)
+    modem_id = db.Column(db.String)
+    status = db.Column(db.Integer) # 0:idle, 1:used, ...
+    plan = db.Column(db.String)
+    location = db.Column(db.String)
+    
+    def __repr__(self):
+        return f'<Products {self.name!r}>'
+
+scooter_lst = [Scooters(license_plate='EPA0276', 
+                        modem_id='357364080996860',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0277', 
+                        modem_id='357364080584757',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0278', 
+                        modem_id='357364081020470',
+                        status=0,
+                        plan='rent',
+                        location='澎湖'),
+                Scooters(license_plate='EPA0279', 
+                        modem_id='357364081020397',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0280', 
+                        modem_id='357364081020124',
+                        status=0,
+                        plan='rent',
+                        location='澎湖'),
+                Scooters(license_plate='EPA0281', 
+                        modem_id='357364080997793',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0282', 
+                        modem_id='357364080609265',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0283', 
+                        modem_id='357364080609174',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0285', 
+                        modem_id='357364081002379',
+                        status=0,
+                        plan='rent',
+                        location='澎湖'),
+                Scooters(license_plate='EPA0286', 
+                        modem_id='357364081006461',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+            ]   
+
+class Orders(db.Model):
+    __tablename__= 'orders'
+
+    id = db.Column(db.String, primary_key=True)
+    amount = db.Column(db.Float)
+    tx_id = db.Column(db.Integer)
+    is_pay = db.Column(db.Boolean, default=False)
+    created_time = db.Column(db.DateTime, default=datetime.now())
+
+    user_id = db.Column(db.String, db.ForeignKey("users.id")) # Foreignkey(table_name.column_name)
+    items = db.relationship('Items', backref='order') # relationship(cls_name, backref='var_name')
+    # order.items
+    # item.order, for backref
+
+    def display_receipt(self):
+        item_box_components = []
+        for item in self.items:
+            item_box_components.append(BoxComponent(
+                layout='horizontal',
+                contents=[
+                    TextComponent(text=f'{item.quantity} x {item.product_name}',
+                                size='sm',
+                                color='#555555',
+                                flex=0),
+                    TextComponent(text=f'NT${item.quantity * item.product_price}',
+                                size='sm',
+                                color='#111111',
+                                align='end')
+                                ]
+            )
+            )
+        
+        bubble = BubbleContainer(
+            direction='ltr',
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text='RECEIPT',
+                                weight='bold',
+                                color='#1DB446',
+                                size='sm'),
+                    TextComponent(text='Fun2Go',
+                                weight='bold',
+                                size='xxl',
+                                margin='md'),
+                    TextComponent(text='Linebot Store',
+                                size='xs',
+                                color='#aaaaaa',
+                                wrap=True),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=item_box_components
+                    ),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=[
+                            BoxComponent(
+                                layout='horizontal',
+                                contents=[
+                                    TextComponent(
+                                        text='TOTAL',
+                                        size='sm',
+                                        color='#555555',
+                                        flex=0),
+                                    TextComponent(
+                                        text=f'NT${self.amount}',
+                                        size='sm',
+                                        color='#111111',
+                                        align='end')    
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            )
+        )
+
+        return FlexSendMessage(alt_text='receipt', contents=bubble)
+
+class Items(db.Model):
+    __tablename__ = 'items'
+    id = db.Column(db.Integer, primary_key=True)
+    reserved_datetime=db.Column(db.DateTime)
+    product_id = db.Column(db.ForeignKey("products.id"))
+    product_name = db.Column(db.String)
+    product_price = db.Column(db.Integer)
+    quantity = db.Column(db.Integer)
+    created_time = db.Column(db.DateTime, default=datetime.now())
+    order_id = db.Column("order_id", db.ForeignKey("orders.id"))
+
+class Binders(db.Model):
+    __tablename__ = 'binders'
+    id = db.Column(db.Integer, primary_key=True)
+    plate = db.Column(db.String)
+    created_time = db.Column(db.DateTime, default=datetime.now())
+    user_id = db.Column("user_id", db.ForeignKey("users.id")) # Foreignkey(table_name.column_name)
+
+class Modem_750(db.Model):
+    __tablename__ = 'modem_750'
+    index = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer)
+    transactionId = db.Column(db.String)
+    messageEncoding = db.Column(db.String)
+    messageType = db.Column(db.String)
+    modemId = db.Column(db.String)
+    messageId = db.Column(db.String)
+    dataLength = db.Column(db.String)
+    gpsTime = db.Column(db.DateTime)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    altitude = db.Column(db.Float)
+    speed = db.Column(db.Float)
+    direction = db.Column(db.Float)
+    odometer = db.Column(db.Integer)
+    hdop = db.Column(db.Float)
+    satellites = db.Column(db.Integer)
+    ioStatus = db.Column(db.String)
+    reserved = db.Column(db.String)
+    mainPowerVoltage = db.Column(db.Float)
+    backupBatteryVoltage = db.Column(db.Float)
+    rtcTime = db.Column(db.DateTime)
+    posTime = db.Column(db.DateTime)
+    csq = db.Column(db.String)
+    mcuMotorRpm = db.Column(db.Integer)
+    obdSpeed = db.Column(db.Integer)
+    bmsBatterySoc = db.Column(db.Integer)
+    mtrOdoData = db.Column(db.String)
+    keyStatus = db.Column(db.String)
+    chargingStatus = db.Column(db.String)
+
+Users.orders = db.relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
+    # user.orders
+    # order.user, for backref
+Users.binders = db.relationship('Binders', backref='user') # relationship(cls_name, backref='var_name')
+##======================Marshmallow==================================
+mars = Marshmallow(app)
+class ModemSchema_750(mars.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Modem_750
+        include_fk = True
+##======================Cache==================================
+cache = SimpleCache(threshold=500, default_timeout=0) # it is like a dict {id:<dict>}
+
+class Cart(object):
+    def __init__(self, user_id):
+        self.cache = cache
+        self.user_id = user_id
+
+    def bucket(self):
+        return cache.get(key=self.user_id) # return a dict or None
+
+    def add(self, datetime, product, num):
+        bucket = cache.get(key=self.user_id)
+        #print(bucket)
+        if bucket == None:
+            cache.add(key=self.user_id, value={datetime:{product:int(num)}}) # equal to cache.set()
+        elif datetime in bucket.keys():
+            bucket[datetime].update({product:int(num)}) # dict.update(), could update a pair or add a new pair
+            cache.set(key=self.user_id, value=bucket) # set, like updating
+        else:
+            bucket.update({datetime:{product:int(num)}}) # dict.update(), could update a pair or add a new pair
+            cache.set(key=self.user_id, value=bucket) # set, like updating
+
+    def reset(self):
+        cache.set(key=self.user_id, value={})
+
+    def reserve(self):
+        bubbles = []
+        print(self.bucket())
+
+        for datetime, value in self.bucket().items():
+            reserve_box_comp = []
+            for product_name, num in value.items():
+                product = Products.query.filter(Products.name.ilike(product_name)).first()
+                reserve_box_comp.append(BoxComponent(
+                        layout='horizontal',
+                        spacing='sm',
+                        contents=[
+                            TextComponent(text=f"{product.name}", size='sm', color='#555555', flex=0, align='start'),
+                            TextComponent(text=f"{num}", size='sm', color='#111111', align='end')
+                        ]
+                    )
+                )
+                
+            bubble = BubbleContainer(
+                direction='ltr',
+                body=BoxComponent(
+                    layout='vertical',
+                    spacing='sm',
+                    contents=[
+                        TextComponent(
+                            text=f"Reserving at {datetime}",
+                            weight='bold',
+                            size='xl',
+                            wrap=True,
+                            contents=[]
+                        ),
+                        SeparatorComponent(),
+                        BoxComponent(
+                            layout='vertical',
+                            margin='xxl',
+                            spacing='sm',
+                            contents=reserve_box_comp
+                        )
+                    ]
+                ),
+                footer=BoxComponent(
+                    layout='vertical',
+                    spacing='sm',
+                    contents=[
+                        ButtonComponent(
+                            style='primary',
+                            action=PostbackAction(
+                                label="Add/Revise",
+                                text="Processing...Add/Revise",
+                                data=f"PostbackAction:cart_datetime={datetime}"
+                            )
+                        ),
+                        ButtonComponent(
+                            action=MessageAction(
+                                label="That's it", 
+                                text="that's it"
+                            )
+                        )
+                    ]
+                )
+            )
+            bubbles.append(bubble)
+        
+        return FlexSendMessage(alt_text='IE125 reserve carousel', contents=CarouselContainer(contents=bubbles))
+
+    def display(self):
+        total = 0
+        product_box_comp = []
+
+        for datetime, value in self.bucket().items():
+            #print(datetime, value)
+            product_box_comp.append(BoxComponent(
+                    layout='vertical',
+                    contents=[TextComponent(text=f"{datetime}",
+                                        size='sm', color='#555555', flex=0, weight="bold", align="end"),
+                            SeparatorComponent(margin='sm')
+                                ]
+                )
+                )
+            for product_name, num in value.items():
+                product = Products.query.filter(Products.name.ilike(product_name)).first()
+                amount = product.price * int(num)
+                total += amount
+
+                product_box_comp.append(BoxComponent(
+                    layout='horizontal',
+                    contents=[
+                        TextComponent(text=f"{num} x {product_name}",
+                                        size='sm', color='#555555', flex=0),
+                        TextComponent(text=f"NT$ {amount}",
+                                        size='sm', color='#111111', align='end')
+                    ]
+                )
+                )
+        bubble = BubbleContainer(
+            direction='ltr',
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text=f"Here is your order:",
+                                        size='md', wrap=True),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=product_box_comp
+                    ),
+                    SeparatorComponent(margin='xxl'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xxl',
+                        spacing='sm',
+                        contents=[
+                            BoxComponent(
+                                layout='horizontal',
+                                contents=[
+                                    TextComponent(text='Total',
+                                                    size='sm', color='#555555', flex=0),
+                                    TextComponent(text=f'NT$ {total}',
+                                                    size='sm', color='#111111', align='end')
+                                ]
+                            )
+                        ]
+                    )
+                ]
+            ),
+            footer=BoxComponent(
+                layout='vertical',
+                spacing='md',
+                contents=[
+                    ButtonComponent(
+                        style='primary',
+                        color='#1DB446',
+                        action=PostbackAction(label='Checkout',
+                                                display_text='checkout',
+                                                data='action=checkout')
+                    ),
+                    BoxComponent(
+                        layout='horizontal',
+                        spacing='md',
+                        contents=[
+                            ButtonComponent(
+                                style='primary',
+                                color='#aaaaaa',
+                                action=MessageAction(label='Empty Cart',
+                                                        text='empty cart')
+                            ),
+                            ButtonComponent(
+                                style='primary',
+                                color='#aaaaaa',
+                                flex=2,
+                                action=MessageAction(label='Add',
+                                                        text='add')
+                            )
+                        ]
+                    )
+                ]
+            )
+        ) 
+
+        return FlexSendMessage(alt_text='Cart', contents=bubble)
+
+##======================LinePay==================================
+linepay_api = LinePayApi(config.LINE_PAY_ID, config.LINE_PAY_SECRET, is_sandbox=True)
+
+class LinePay():
+    def __init__(self, currency='TWD'):
+        self.confirm_url = url_for('.confirm', _external=True, _scheme='https') #https://rvproxy.fun2go.energy/confirm
+        self.cancel_url = url_for('.cancel', _external=True, _scheme='https') #https://rvproxy.fun2go.energy/cancel
+        self.channel_id = config.LINE_PAY_ID
+        self.secret=config.LINE_PAY_SECRET
+        self.currency=currency
+
+    def _headers(self, **kwargs):
+        return {**{'Content-Type':'application/json',
+                            'X-LINE-ChannelId':self.channel_id,
+                            'X-LINE-ChannelSecret':self.secret},
+                            **kwargs}
+
+    def pay(self, amount, order_id, packages=[]):
+        request_options = {
+            "amount": amount,
+            "currency": self.currency,
+            "orderId": order_id,
+            "packages": packages,
+            "redirectUrls": {
+                "confirmUrl": self.confirm_url,
+                "cancelUrl": self.cancel_url
+            }
+        }
+
+        response = linepay_api.request(request_options) # return a dict, where the key ['info'] also holds a dict
+        return self._pay_check_response(response)
+
+    def confirm(self, tx_id, amount):
+        response = linepay_api.confirm(
+            tx_id,
+            amount,
+            self.currency
+        )
+        return self._confirm_check_response(response)
+
+    def _pay_check_response(self, response):
+        transaction_id = int(response.get("info", {}).get("transactionId", 0))
+        check_result = linepay_api.check_payment_status(transaction_id)
+        config.logger.debug(check_result)
+        config.logger.debug(response.get("info"))
+        if check_result.get("returnCode") == '0000':
+            return response.get("info")
+        else:
+            raise Exception(f'{check_result.get("returnCode")}:{ check_result.get("returnMessage")}')
+
+    def _confirm_check_response(self, response):
+        transaction_id = int(response.get("info", {}).get("transactionId", 0))
+        check_result = linepay_api.check_payment_status(transaction_id)
+        config.logger.debug(check_result)
+        config.logger.debug(response.get("info"))
+        if check_result.get("returnCode") == '0123':
+            return response.get("info")
+        else:
+            raise Exception(f'{check_result.get("returnCode")}:{ check_result.get("returnMessage")}')
+
+##======================API==================================
+ModemSchema_750 = ModemSchema_750()
+yes_post_api = Api(app)
+class test(Resource):
+    def get(self):
+        args = request.args
+        return args, 200
+
+    def post(self):
+        data = request.get_json() # return as a dict
+        
+        for i in ['gpsTime', 'rtcTime', 'posTime']:
+            if data.get(i):
+                data[i] = strf_datetime(data[i])
+        
+        msg_id = data['messageId']
+        if msg_id == '750':
+            db.session.add(Modem_750(**ModemSchema_750.load(data)))
+            config.logger.info(data)
+        elif msg_id == '275':
+            config.logger.info('Format_275')
+            config.logger.info(data)
+        elif msg_id == '180':
+            config.logger.info('Event Reserve Table')
+            config.logger.info(data)
+        elif msg_id == '177':
+            config.logger.info('Tow Alert')
+            config.logger.info(data)
+        elif any([msg_id == s for s in ('160', '166', '167', '168', '175')]):
+            config.logger.info('Format_extend')
+            config.logger.info(data)
+        elif any([msg_id == s for s in ('809', '810', '500', '501', '402')]):
+            config.logger.info('Format_std')
+            config.logger.info(data)
+        db.session.commit()
+
+        #config.logger.debug([type(i) for i in data.values()])
+        return data, 201
+
+yes_post_api.add_resource(test, '/test')
 
 ##======================Temp Var==================================
 plates = [
@@ -208,7 +818,7 @@ def handle_message(event):
         datetime = msg_text.split('\n')[3]
         num_item = msg_text.split('\n')[-1]
         #print(product_name, num_item)
-        product = Products.query(Products).filter(Products.name.ilike(product_name)).first()
+        product = Products.query.filter(Products.name.ilike(product_name)).first()
         if product and num_item and num_item != '0' and num_item.isdigit():
             # after certain timeout, the cache will be dropped
             if cart.bucket() == None:
