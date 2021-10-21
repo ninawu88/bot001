@@ -255,9 +255,6 @@ class Orders(db.Model):
     created_time = db.Column(db.DateTime, default=datetime.now())
 
     user_id = db.Column(db.String, db.ForeignKey("users.id")) # Foreignkey(table_name.column_name)
-    items = db.relationship('Items', backref='order') # relationship(cls_name, backref='var_name')
-    # order.items
-    # item.order, for backref
 
     def display_receipt(self):
         item_box_components = []
@@ -385,6 +382,9 @@ Users.orders = db.relationship('Orders', backref='user') # relationship(cls_name
     # user.orders
     # order.user, for backref
 Users.binders = db.relationship('Binders', backref='user') # relationship(cls_name, backref='var_name')
+Orders.items = db.relationship('Items', backref='order') # relationship(cls_name, backref='var_name')
+    # order.items
+    # item.order, for backref
 ##======================Marshmallow==================================
 mars = Marshmallow(app)
 class ModemSchema_750(mars.SQLAlchemyAutoSchema):
