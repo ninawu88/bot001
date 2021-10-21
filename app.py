@@ -331,19 +331,19 @@ class Items(db.Model):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
     reserved_datetime=db.Column(db.DateTime)
-    product_id = db.Column(db.ForeignKey("products.id"))
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"))
     product_name = db.Column(db.String)
     product_price = db.Column(db.Integer)
     quantity = db.Column(db.Integer)
     created_time = db.Column(db.DateTime, default=datetime.now())
-    order_id = db.Column("order_id", db.ForeignKey("orders.id"))
+    order_id = db.Column(db.String, db.ForeignKey("orders.id"))
 
 class Binders(db.Model):
     __tablename__ = 'binders'
     id = db.Column(db.Integer, primary_key=True)
     plate = db.Column(db.String)
     created_time = db.Column(db.DateTime, default=datetime.now())
-    user_id = db.Column("user_id", db.ForeignKey("users.id")) # Foreignkey(table_name.column_name)
+    user_id = db.Column(db.String, db.ForeignKey("users.id")) # Foreignkey(table_name.column_name)
 
 class Modem_750(db.Model):
     __tablename__ = 'modem_750'
@@ -352,7 +352,7 @@ class Modem_750(db.Model):
     transactionId = db.Column(db.String)
     messageEncoding = db.Column(db.String)
     messageType = db.Column(db.String)
-    modemId = db.Column(db.String)
+    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
     messageId = db.Column(db.String)
     dataLength = db.Column(db.String)
     gpsTime = db.Column(db.DateTime)
@@ -378,18 +378,57 @@ class Modem_750(db.Model):
     keyStatus = db.Column(db.String)
     chargingStatus = db.Column(db.String)
 
+class Modem_275(db.Model):
+    __tablename__ = 'modem_275'
+    index = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer)
+    transactionId = db.Column(db.String)
+    messageEncoding = db.Column(db.String)
+    messageType = db.Column(db.String)
+    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
+    messageId = db.Column(db.String)
+    dataLength = db.Column(db.String)
+    gpsTime = db.Column(db.DateTime)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    altitude = db.Column(db.Float)
+    speed = db.Column(db.Float)
+    direction = db.Column(db.Float)
+    odometer = db.Column(db.Integer)
+    hdop = db.Column(db.Float)
+    satellites = db.Column(db.Integer)
+    ioStatus = db.Column(db.String)
+    reserved = db.Column(db.String)
+    mainPowerVoltage = db.Column(db.Float)
+    backupBatteryVoltage = db.Column(db.Float)
+    rtcTime = db.Column(db.DateTime)
+    posTime = db.Column(db.DateTime)
+    deviceImei = db.Column(db.String)
+    simCardIccid = db.Column(db.String)
+    simCardImsi =  db.Column(db.String)
+    deviceModelName = db.Column(db.String)
+    deviceFwVersion = db.Column(db.String)
+    deviceHwVersion = db.Column(db.String)
+
 Users.orders = db.relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
     # user.orders
     # order.user, for backref
-Users.binders = db.relationship('Binders', backref='user') # relationship(cls_name, backref='var_name')
-Orders.items = db.relationship('Items', backref='order') # relationship(cls_name, backref='var_name')
+Users.binders = db.relationship('Binders', backref='user') 
+Orders.items = db.relationship('Items', backref='order') 
     # order.items
     # item.order, for backref
+Scooters.modem_750 = db.relationship('Modem_750', backref='scooter')
+Scooters.modem_275 = db.relationship('Modem_275', backref='scooter')
 ##======================Marshmallow==================================
 mars = Marshmallow(app)
 class ModemSchema_750(mars.SQLAlchemyAutoSchema):
     class Meta:
         model = Modem_750
+        include_fk = True
+
+class ModemSchema_275(mars.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Modem_275
         include_fk = True
 ##======================Cache==================================
 cache = SimpleCache(threshold=500, default_timeout=0) # it is like a dict {id:<dict>}
@@ -641,7 +680,6 @@ class LinePay():
             raise Exception(f'{check_result.get("returnCode")}:{ check_result.get("returnMessage")}')
 
 ##======================API==================================
-ModemSchema_750 = ModemSchema_750()
 yes_post_api = Api(app)
 class test(Resource):
     def get(self):
@@ -657,10 +695,10 @@ class test(Resource):
         
         msg_id = data['messageId']
         if msg_id == '750':
-            db.session.add(Modem_750(**ModemSchema_750.load(data)))
+            db.session.add(Modem_750(**ModemSchema_750().load(data)))
             config.logger.info(data)
         elif msg_id == '275':
-            config.logger.info('Format_275')
+            db.session.add(Modem_275(**ModemSchema_275().load(data)))
             config.logger.info(data)
         elif msg_id == '180':
             config.logger.info('Event Reserve Table')
