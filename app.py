@@ -708,7 +708,7 @@ class test(Resource):
                 db.session.add(Modem_275(**ModemSchema_275().load(data)))
                 config.logger.info(data)
             else:
-                if Binders.query.filter(Binders.plate.ilike(license_plate))[0]:
+                if Binders.query.filter(Binders.plate.ilike(license_plate)):
                     _user_id = Binders.query.filter(Binders.plate.ilike(license_plate))[0]
                     if _msg_id == '180': 
                         config.logger.info('Event Reserve Table')
