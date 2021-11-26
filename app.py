@@ -42,6 +42,7 @@ db = SQLAlchemy(app)
 
 ##======================DB==================================
 # add new method to the scoped session instance 
+@app.before_first_request
 def init_tables():
     result = init_db()
     if result:
