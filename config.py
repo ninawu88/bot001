@@ -20,8 +20,8 @@ handler = WebhookHandler(Channel_secret)
 #print(os.environ.get('Channel_access_token'))
 
 # db
-db_path = 'sqlite:///' + f'{os.path.dirname(__file__)}/linebot.db'
-
+#db_path = 'sqlite:///' + f'{os.path.dirname(__file__)}/linebot.db'
+db_path = os.environ.get('DATABASE_URL')
 # linepay
 LINE_PAY_ID = os.environ.get('LINE_PAY_ID')
 LINE_PAY_SECRET = os.environ.get('LINE_PAY_SECRET')
