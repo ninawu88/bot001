@@ -51,10 +51,11 @@ def init_tables():
         db.session.commit()
 
 def init_db():
-    if database_exists(config.db_path):
+    engine.connect()
+    if engine.dialect.has_table(engine, 'product_lst'):
         return False
     else:    
-        db.create_all()
+        Base.metadata.create_all(engine)
         return True
 
 def get_or_create_user(user_id):
