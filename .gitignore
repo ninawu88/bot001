@@ -143,4 +143,5 @@ cython_debug/
 *.db
 *.log
 exp_alembic.ini
+exp_alembic_env.py
 supervisord.conf
