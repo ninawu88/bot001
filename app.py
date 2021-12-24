@@ -51,12 +51,12 @@ def init_tables():
         db.session.commit()
 
 def init_db():
-    engine.connect()
-    if engine.dialect.has_table(engine, 'product_lst'):
+    if (db.inspect(db.get_engine()).has_table('products')):
         return False
-    else:    
-        Base.metadata.create_all(engine)
+    else:
+        db.create_all()
         return True
+
 
 def get_or_create_user(user_id):
     user = Users.query.filter_by(id=user_id).first()
