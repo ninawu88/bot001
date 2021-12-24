@@ -21,7 +21,7 @@ handler = WebhookHandler(Channel_secret)
 
 # db
 #db_path = 'sqlite:///' + f'{os.path.dirname(__file__)}/linebot.db'
-db_path = os.environ.get('DATABASE_URL')
+db_path = "postgresql://zsgtoftuxrdqwf:3e590b3c1cd3446fa53df38447627ded7afc83c6e66396516188839a455bc7e9@ec2-3-89-214-80.compute-1.amazonaws.com:5432/d1mg0jrl014j8k"
 # linepay
 LINE_PAY_ID = os.environ.get('LINE_PAY_ID')
 LINE_PAY_SECRET = os.environ.get('LINE_PAY_SECRET')
