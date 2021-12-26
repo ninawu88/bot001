@@ -354,7 +354,7 @@ class Modem_750(db.Model):
     transactionId = db.Column(db.String)
     messageEncoding = db.Column(db.String)
     messageType = db.Column(db.String)
-    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
+    modemId = db.Column(db.String)
     messageId = db.Column(db.String)
     dataLength = db.Column(db.String)
     gpsTime = db.Column(db.DateTime)
@@ -379,6 +379,7 @@ class Modem_750(db.Model):
     mtrOdoData = db.Column(db.String)
     keyStatus = db.Column(db.String)
     chargingStatus = db.Column(db.String)
+    __table_args__ = (db.ForeignKeyConstraint([modemId],[Scooters.modem_id]), {})
 
 class Modem_275(db.Model):
     __tablename__ = 'modem_275'
