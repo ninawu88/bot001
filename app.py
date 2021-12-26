@@ -302,7 +302,7 @@ class Modem_750(db.Model):
     transactionId = db.Column(db.String)
     messageEncoding = db.Column(db.String)
     messageType = db.Column(db.String)
-    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
+    #modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
     messageId = db.Column(db.String)
     dataLength = db.Column(db.String)
     gpsTime = db.Column(db.DateTime)
