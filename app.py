@@ -335,7 +335,7 @@ class Modem_275(db.Model):
     transactionId = db.Column(db.String)
     messageEncoding = db.Column(db.String)
     messageType = db.Column(db.String)
-    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
+    #modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
     messageId = db.Column(db.String)
     dataLength = db.Column(db.String)
     gpsTime = db.Column(db.DateTime)
@@ -367,8 +367,8 @@ Users.binders = db.relationship('Binders', backref='user')
 Orders.items = db.relationship('Items', backref='order') 
     # order.items
     # item.order, for backref
-Scooters.modem_750 = db.relationship('Modem_750', backref='scooter')
-Scooters.modem_275 = db.relationship('Modem_275', backref='scooter')
+#Scooters.modem_750 = db.relationship('Modem_750', backref='scooter')
+#Scooters.modem_275 = db.relationship('Modem_275', backref='scooter')
 
 scooter_lst = [Scooters(license_plate='EPA0276', 
                         modem_id='357364080996860',
