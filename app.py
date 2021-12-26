@@ -195,6 +195,58 @@ class Scooters(db.Model):
     def __repr__(self):
         return f'<Products {self.name!r}>'
 
+scooter_lst = [Scooters(license_plate='EPA0276', 
+                        modem_id='357364080996860',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0277', 
+                        modem_id='357364080584757',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0278', 
+                        modem_id='357364081020470',
+                        status=0,
+                        plan='rent',
+                        location='澎湖'),
+                Scooters(license_plate='EPA0279', 
+                        modem_id='357364081020397',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0280', 
+                        modem_id='357364081020124',
+                        status=0,
+                        plan='rent',
+                        location='澎湖'),
+                Scooters(license_plate='EPA0281', 
+                        modem_id='357364080997793',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0282', 
+                        modem_id='357364080609265',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0283', 
+                        modem_id='357364080609174',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+                Scooters(license_plate='EPA0285', 
+                        modem_id='357364081002379',
+                        status=0,
+                        plan='rent',
+                        location='澎湖'),
+                Scooters(license_plate='EPA0286', 
+                        modem_id='357364081006461',
+                        status=0,
+                        plan='rent',
+                        location='竹北'),
+            ]   
+
 class Orders(db.Model):
     __tablename__= 'orders'
 
@@ -302,7 +354,7 @@ class Modem_750(db.Model):
     transactionId = db.Column(db.String)
     messageEncoding = db.Column(db.String)
     messageType = db.Column(db.String)
-    #modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
+    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
     messageId = db.Column(db.String)
     dataLength = db.Column(db.String)
     gpsTime = db.Column(db.DateTime)
@@ -335,7 +387,7 @@ class Modem_275(db.Model):
     transactionId = db.Column(db.String)
     messageEncoding = db.Column(db.String)
     messageType = db.Column(db.String)
-    #modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
+    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
     messageId = db.Column(db.String)
     dataLength = db.Column(db.String)
     gpsTime = db.Column(db.DateTime)
@@ -367,60 +419,8 @@ Users.binders = db.relationship('Binders', backref='user')
 Orders.items = db.relationship('Items', backref='order') 
     # order.items
     # item.order, for backref
-#Scooters.modem_750 = db.relationship('Modem_750', backref='scooter')
-#Scooters.modem_275 = db.relationship('Modem_275', backref='scooter')
-
-scooter_lst = [Scooters(license_plate='EPA0276', 
-                        modem_id='357364080996860',
-                        status=0,
-                        plan='rent',
-                        location='竹北'),
-                Scooters(license_plate='EPA0277', 
-                        modem_id='357364080584757',
-                        status=0,
-                        plan='rent',
-                        location='竹北'),
-                Scooters(license_plate='EPA0278', 
-                        modem_id='357364081020470',
-                        status=0,
-                        plan='rent',
-                        location='澎湖'),
-                Scooters(license_plate='EPA0279', 
-                        modem_id='357364081020397',
-                        status=0,
-                        plan='rent',
-                        location='竹北'),
-                Scooters(license_plate='EPA0280', 
-                        modem_id='357364081020124',
-                        status=0,
-                        plan='rent',
-                        location='澎湖'),
-                Scooters(license_plate='EPA0281', 
-                        modem_id='357364080997793',
-                        status=0,
-                        plan='rent',
-                        location='竹北'),
-                Scooters(license_plate='EPA0282', 
-                        modem_id='357364080609265',
-                        status=0,
-                        plan='rent',
-                        location='竹北'),
-                Scooters(license_plate='EPA0283', 
-                        modem_id='357364080609174',
-                        status=0,
-                        plan='rent',
-                        location='竹北'),
-                Scooters(license_plate='EPA0285', 
-                        modem_id='357364081002379',
-                        status=0,
-                        plan='rent',
-                        location='澎湖'),
-                Scooters(license_plate='EPA0286', 
-                        modem_id='357364081006461',
-                        status=0,
-                        plan='rent',
-                        location='竹北'),
-            ]   
+Scooters.modem_750 = db.relationship('Modem_750', backref='scooter')
+Scooters.modem_275 = db.relationship('Modem_275', backref='scooter')
 ##======================Marshmallow==================================
 mars = Marshmallow(app)
 class ModemSchema_750(mars.SQLAlchemyAutoSchema):
