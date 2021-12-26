@@ -246,6 +246,8 @@ scooter_lst = [Scooters(license_plate='EPA0276',
                         plan='rent',
                         location='竹北'),
             ]   
+Scooters.modem_750 = db.relationship('Modem_750', backref='scooter')
+Scooters.modem_275 = db.relationship('Modem_275', backref='scooter')
 
 class Orders(db.Model):
     __tablename__= 'orders'
@@ -419,8 +421,7 @@ Users.binders = db.relationship('Binders', backref='user')
 Orders.items = db.relationship('Items', backref='order') 
     # order.items
     # item.order, for backref
-Scooters.modem_750 = db.relationship('Modem_750', backref='scooter')
-Scooters.modem_275 = db.relationship('Modem_275', backref='scooter')
+
 ##======================Marshmallow==================================
 mars = Marshmallow(app)
 class ModemSchema_750(mars.SQLAlchemyAutoSchema):
