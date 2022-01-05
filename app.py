@@ -727,12 +727,14 @@ class test(Resource):
             config.logger.warn(f'{_modem_id} does not match any plate number in db')    
 
         #config.logger.info(Scooters)        
-        config.logger.info(Binders.query.filter(Binders.plate.ilike('epa0277')).first())
+        #config.logger.info(Binders.query.filter(Binders.plate.ilike('epa0277')).first())
 
         try:
             db.session.commit()
         except:
             db.session.rollback()
+        finally:
+            db.session.close()
         #config.logger.debug([type(i) for i in data.values()])
         return data, 201
 
