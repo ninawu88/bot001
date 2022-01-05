@@ -1,4 +1,5 @@
-/venv/*
+/dev_venv
+/dev_venv/*
 */__pycache__
 /__pycache__
 /.env
@@ -8,5 +9,6 @@
 /alembic/versions
 /alembic/README
 /alembic/script.py.mako
+/.gitignore
 /*.log
 
