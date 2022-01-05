@@ -10,7 +10,6 @@ from linebot.models import *
 from linepay import LinePayApi
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
-from sqlalchemy_utils import database_exists
 from urllib.parse import quote, parse_qsl
 import uuid
 from cachelib import SimpleCache
@@ -42,6 +41,7 @@ db = SQLAlchemy(app)
 
 ##======================DB==================================
 # add new method to the scoped session instance 
+@app.before_first_request
 def init_tables():
     result = init_db()
     if result:
@@ -50,7 +50,7 @@ def init_tables():
         db.session.commit()
 
 def init_db():
-    if database_exists(config.db_path):
+    if (db.inspect(db.get_engine()).has_table('products')):
         return False
     else:    
         db.create_all()
