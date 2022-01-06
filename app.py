@@ -708,8 +708,10 @@ class test(Resource):
                 db.session.add(Modem_275(**ModemSchema_275().load(data)))
                 config.logger.info(data)
             else:
-                if Binders.query.filter(Binders.plate.ilike(license_plate)):
-                    _user_id = Binders.query.filter(Binders.plate.ilike(license_plate))[0]
+                test = Binders.query.filter(Binders.plate.ilike(license_plate))
+                config.logger.info(test)
+                if test:
+                    #_user_id = Binders.query.filter(Binders.plate.ilike(license_plate))[0]
                     if _msg_id == '180': 
                         config.logger.info('Event Reserve Table')
                         config.logger.info(data)
@@ -759,7 +761,8 @@ plates = [
 # or when the application shuts down
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    db.session.remove()
+    #db.session.remove()
+    config.logger.info('close db')
 
 ##======================Route==================================
 @app.route("/", methods=['GET', 'POST'])
@@ -1132,4 +1135,4 @@ def handle_unfollow(event):
 
 if __name__ == "__main__":
     init_tables()
-    app.run(debug=True) # one web request is a thread 
+    app.run(debug=False) # one web request is a thread 
