@@ -37,7 +37,7 @@ app = Flask(__name__)
 ##======================SQL==================================
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = config.db_path
-db = SQLAlchemy(app)
+db = SQLAlchemy(app, session_options={"autoflush": False, "autocommit": False})
 
 ##======================DB==================================
 # add new method to the scoped session instance 
@@ -708,22 +708,20 @@ class test(Resource):
                 db.session.add(Modem_275(**ModemSchema_275().load(data)))
                 config.logger.info(data)
             else:
-                test = Binders.query.filter(Binders.plate.ilike(license_plate))
-                config.logger.info(test)
-                if test:
-                    #_user_id = Binders.query.filter(Binders.plate.ilike(license_plate))[0]
-                    if _msg_id == '180': 
-                        config.logger.info('Event Reserve Table')
-                        config.logger.info(data)
-                    elif _msg_id == '177':
-                        config.logger.info('Tow Alert')
-                        config.logger.info(data)
-                    elif any([_msg_id == s for s in ('160', '166', '167', '168', '175')]):
-                        config.logger.info('Format_extend')
-                        config.logger.info(data)
-                    elif any([_msg_id == s for s in ('809', '810', '500', '501', '402')]):
-                        config.logger.info('Format_std')
-                        config.logger.info(data)
+                _user_id = Binders.query.filter(Binders.plate.ilike(license_plate)).first()
+                config.logger.info(_user_id)
+                if _msg_id == '180': 
+                    config.logger.info('Event Reserve Table')
+                    config.logger.info(data)
+                elif _msg_id == '177':
+                    config.logger.info('Tow Alert')
+                    config.logger.info(data)
+                elif any([_msg_id == s for s in ('160', '166', '167', '168', '175')]):
+                    config.logger.info('Format_extend')
+                    config.logger.info(data)
+                elif any([_msg_id == s for s in ('809', '810', '500', '501', '402')]):
+                    config.logger.info('Format_std')
+                    config.logger.info(data)
 
         else:
             config.logger.warn(f'{_modem_id} does not match any plate number in db')    
