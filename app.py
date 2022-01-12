@@ -8,8 +8,14 @@ from linebot.exceptions import (
 )
 from linebot.models import *
 from linepay import LinePayApi
+
 from flask_sqlalchemy import SQLAlchemy
+
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+
 from flask_marshmallow import Marshmallow
+
 from urllib.parse import quote, parse_qsl
 import uuid
 from cachelib import SimpleCache
@@ -31,13 +37,9 @@ def strf_datetime(dt):
 
 # import custom module
 import config
-
+from database import db_session, Base, engine
 
 app = Flask(__name__)
-##======================SQL==================================
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = config.db_path
-db = SQLAlchemy(app, session_options={"autoflush": False, "autocommit": False})
 
 ##======================DB==================================
 # add new method to the scoped session instance 
@@ -45,15 +47,15 @@ db = SQLAlchemy(app, session_options={"autoflush": False, "autocommit": False})
 def init_tables():
     result = init_db()
     if result:
-        db.session.add_all(product_lst) # a way to insert many query
-        db.session.add_all(scooter_lst)
-        db.session.commit()
+        db_session.add_all(product_lst) # a way to insert many query
+        db_session.add_all(scooter_lst)
+        db_session.commit()
 
 def init_db():
     if (db.inspect(db.get_engine()).has_table('products')):
         return False
     else:    
-        db.create_all()
+        Base.metadata.create_all(bind=engine)
         return True
 
 def get_or_create_user(user_id):
@@ -64,28 +66,28 @@ def get_or_create_user(user_id):
         profile = config.line_bot_api.get_profile(user_id)
         # insert entries into the database
         user = Users(id=user_id, nick_name=profile.display_name, image_url=profile.picture_url)
-        db.session.add(user) # insert query
-        db.session.commit()
+        db_session.add(user) # insert query
+        db_session.commit()
         #print(f"Add {user} to db")
     return user
 
-class Users(db.Model):
+class Users(Base):
     __tablename__ = 'users'
-    id = db.Column(db.String, primary_key=True)
-    nick_name = db.Column(db.String)
-    image_url = db.Column(db.String(length=256))
-    created_time = db.Column(db.DateTime, default=datetime.now())
+    id = Column(String, primary_key=True)
+    nick_name = Column(String)
+    image_url = Column(String(length=256))
+    created_time = Column(DateTime, default=datetime.now())
     
     def __repr__(self):
         return f'<User {self.nick_name!r}>'
 
-class Products(db.Model):
+class Products(Base):
     __tablename__ = 'products'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    price = db.Column(db.Integer)
-    desc = db.Column(db.String)
-    image_url = db.Column(db.String(length=256))
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    price = Column(Integer)
+    desc = Column(String)
+    image_url = Column(String(length=256))
     
     # print an instance
     def __repr__(self):
@@ -181,14 +183,14 @@ product_lst = [Products(name='IE125_carstuff',
                         price=800,
                         desc='一天800元')]
 
-class Scooters(db.Model):
+class Scooters(Base):
     __tablename__ = 'scooters'
-    id = db.Column(db.Integer, primary_key=True)
-    license_plate = db.Column(db.String)
-    modem_id = db.Column(db.String)
-    status = db.Column(db.Integer) # 0:idle, 1:used, ...
-    plan = db.Column(db.String)
-    location = db.Column(db.String)
+    id = Column(Integer, primary_key=True)
+    license_plate = Column(String)
+    modem_id = Column(String)
+    status = Column(Integer) # 0:idle, 1:used, ...
+    plan = Column(String)
+    location = Column(String)
     
     def __repr__(self):
         return f'<Products {self.name!r}>'
@@ -245,16 +247,16 @@ scooter_lst = [Scooters(license_plate='EPA0276',
                         location='竹北'),
             ]   
 
-class Orders(db.Model):
+class Orders(Base):
     __tablename__= 'orders'
 
-    id = db.Column(db.String, primary_key=True)
-    amount = db.Column(db.Float)
-    tx_id = db.Column(db.Integer)
-    is_pay = db.Column(db.Boolean, default=False)
-    created_time = db.Column(db.DateTime, default=datetime.now())
+    id = Column(String, primary_key=True)
+    amount = Column(Float)
+    tx_id = Column(Integer)
+    is_pay = Column(Boolean, default=False)
+    created_time = Column(DateTime, default=datetime.now())
 
-    user_id = db.Column(db.String, db.ForeignKey("users.id")) # Foreignkey(table_name.column_name)
+    user_id = Column(String, ForeignKey("users.id")) # Foreignkey(table_name.column_name)
 
     def display_receipt(self):
         item_box_components = []
@@ -327,98 +329,98 @@ class Orders(db.Model):
 
         return FlexSendMessage(alt_text='receipt', contents=bubble)
 
-class Items(db.Model):
+class Items(Base):
     __tablename__ = 'items'
-    id = db.Column(db.Integer, primary_key=True)
-    reserved_datetime=db.Column(db.DateTime)
-    product_id = db.Column(db.Integer, db.ForeignKey("products.id"))
-    product_name = db.Column(db.String)
-    product_price = db.Column(db.Integer)
-    quantity = db.Column(db.Integer)
-    created_time = db.Column(db.DateTime, default=datetime.now())
-    order_id = db.Column(db.String, db.ForeignKey("orders.id"))
+    id = Column(Integer, primary_key=True)
+    reserved_datetime=Column(DateTime)
+    product_id = Column(Integer, ForeignKey("products.id"))
+    product_name = Column(String)
+    product_price = Column(Integer)
+    quantity = Column(Integer)
+    created_time = Column(DateTime, default=datetime.now())
+    order_id = Column(String, ForeignKey("orders.id"))
 
-class Binders(db.Model):
+class Binders(Base):
     __tablename__ = 'binders'
-    id = db.Column(db.Integer, primary_key=True)
-    plate = db.Column(db.String)
-    created_time = db.Column(db.DateTime, default=datetime.now())
-    user_id = db.Column(db.String, db.ForeignKey("users.id")) # Foreignkey(table_name.column_name)
+    id = Column(Integer, primary_key=True)
+    plate = Column(String)
+    created_time = Column(DateTime, default=datetime.now())
+    user_id = Column(String, ForeignKey("users.id")) # Foreignkey(table_name.column_name)
 
-class Modem_750(db.Model):
+class Modem_750(Base):
     __tablename__ = 'modem_750'
-    index = db.Column(db.Integer, primary_key=True)
-    id = db.Column(db.Integer)
-    transactionId = db.Column(db.String)
-    messageEncoding = db.Column(db.String)
-    messageType = db.Column(db.String)
-    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
-    messageId = db.Column(db.String)
-    dataLength = db.Column(db.String)
-    gpsTime = db.Column(db.DateTime)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
-    altitude = db.Column(db.Float)
-    speed = db.Column(db.Float)
-    direction = db.Column(db.Float)
-    odometer = db.Column(db.Integer)
-    hdop = db.Column(db.Float)
-    satellites = db.Column(db.Integer)
-    ioStatus = db.Column(db.String)
-    reserved = db.Column(db.String)
-    mainPowerVoltage = db.Column(db.Float)
-    backupBatteryVoltage = db.Column(db.Float)
-    rtcTime = db.Column(db.DateTime)
-    posTime = db.Column(db.DateTime)
-    csq = db.Column(db.String)
-    mcuMotorRpm = db.Column(db.Integer)
-    obdSpeed = db.Column(db.Integer)
-    bmsBatterySoc = db.Column(db.Integer)
-    mtrOdoData = db.Column(db.String)
-    keyStatus = db.Column(db.String)
-    chargingStatus = db.Column(db.String)
+    index = Column(Integer, primary_key=True)
+    id = Column(Integer)
+    transactionId = Column(String)
+    messageEncoding = Column(String)
+    messageType = Column(String)
+    modemId = Column(String, ForeignKey("scooters.modem_id"))
+    messageId = Column(String)
+    dataLength = Column(String)
+    gpsTime = Column(DateTime)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    altitude = Column(Float)
+    speed = Column(Float)
+    direction = Column(Float)
+    odometer = Column(Integer)
+    hdop = Column(Float)
+    satellites = Column(Integer)
+    ioStatus = Column(String)
+    reserved = Column(String)
+    mainPowerVoltage = Column(Float)
+    backupBatteryVoltage = Column(Float)
+    rtcTime = Column(DateTime)
+    posTime = Column(DateTime)
+    csq = Column(String)
+    mcuMotorRpm = Column(Integer)
+    obdSpeed = Column(Integer)
+    bmsBatterySoc = Column(Integer)
+    mtrOdoData = Column(String)
+    keyStatus = Column(String)
+    chargingStatus = Column(String)
 
-class Modem_275(db.Model):
+class Modem_275(Base):
     __tablename__ = 'modem_275'
-    index = db.Column(db.Integer, primary_key=True)
-    id = db.Column(db.Integer)
-    transactionId = db.Column(db.String)
-    messageEncoding = db.Column(db.String)
-    messageType = db.Column(db.String)
-    modemId = db.Column(db.String, db.ForeignKey("scooters.modem_id"))
-    messageId = db.Column(db.String)
-    dataLength = db.Column(db.String)
-    gpsTime = db.Column(db.DateTime)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
-    altitude = db.Column(db.Float)
-    speed = db.Column(db.Float)
-    direction = db.Column(db.Float)
-    odometer = db.Column(db.Integer)
-    hdop = db.Column(db.Float)
-    satellites = db.Column(db.Integer)
-    ioStatus = db.Column(db.String)
-    reserved = db.Column(db.String)
-    mainPowerVoltage = db.Column(db.Float)
-    backupBatteryVoltage = db.Column(db.Float)
-    rtcTime = db.Column(db.DateTime)
-    posTime = db.Column(db.DateTime)
-    deviceImei = db.Column(db.String)
-    simCardIccid = db.Column(db.String)
-    simCardImsi =  db.Column(db.String)
-    deviceModelName = db.Column(db.String)
-    deviceFwVersion = db.Column(db.String)
-    deviceHwVersion = db.Column(db.String)
+    index = Column(Integer, primary_key=True)
+    id = Column(Integer)
+    transactionId = Column(String)
+    messageEncoding = Column(String)
+    messageType = Column(String)
+    modemId = Column(String, ForeignKey("scooters.modem_id"))
+    messageId = Column(String)
+    dataLength = Column(String)
+    gpsTime = Column(DateTime)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    altitude = Column(Float)
+    speed = Column(Float)
+    direction = Column(Float)
+    odometer = Column(Integer)
+    hdop = Column(Float)
+    satellites = Column(Integer)
+    ioStatus = Column(String)
+    reserved = Column(String)
+    mainPowerVoltage = Column(Float)
+    backupBatteryVoltage = Column(Float)
+    rtcTime = Column(DateTime)
+    posTime = Column(DateTime)
+    deviceImei = Column(String)
+    simCardIccid = Column(String)
+    simCardImsi =  Column(String)
+    deviceModelName = Column(String)
+    deviceFwVersion = Column(String)
+    deviceHwVersion = Column(String)
 
-Users.orders = db.relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
+Users.orders = relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
     # user.orders
     # order.user, for backref
-Users.binders = db.relationship('Binders', backref='user') 
-Orders.items = db.relationship('Items', backref='order') 
+Users.binders = relationship('Binders', backref='user') 
+Orders.items = relationship('Items', backref='order') 
     # order.items
     # item.order, for backref
-Scooters.modem_750 = db.relationship('Modem_750', backref='scooter')
-Scooters.modem_275 = db.relationship('Modem_275', backref='scooter')
+Scooters.modem_750 = relationship('Modem_750', backref='scooter')
+Scooters.modem_275 = relationship('Modem_275', backref='scooter')
 ##======================Marshmallow==================================
 mars = Marshmallow(app)
 class ModemSchema_750(mars.SQLAlchemyAutoSchema):
@@ -699,13 +701,13 @@ class test(Resource):
             license_plate = Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first().license_plate
             
             if _msg_id == '750':
-                db.session.add(Modem_750(**ModemSchema_750().load(data)))
+                db_session.add(Modem_750(**ModemSchema_750().load(data)))
                 config.logger.info(Modem_750.query.all()[-1].scooter.license_plate)
                 #config.logger.info(Modem_750.query.first().scooter.license_plate)
                 #config.logger.info(Scooters.query.filter(Scooters.license_plate.ilike(Modem_750.query.first().scooter.license_plate)).first().modem_750)
                 #config.logger.info(data)
             elif _msg_id == '275':
-                db.session.add(Modem_275(**ModemSchema_275().load(data)))
+                db_session.add(Modem_275(**ModemSchema_275().load(data)))
                 config.logger.info(data)
             else:
                 _user_id = Binders.query.filter(Binders.plate.ilike(license_plate)).first()
@@ -730,11 +732,11 @@ class test(Resource):
         #config.logger.info(Binders.query.filter(Binders.plate.ilike('epa0277')).first())
 
         try:
-            db.session.commit()
+            db_session.commit()
         except:
-            db.session.rollback()
+            db_session.rollback()
         finally:
-            db.session.close()
+            db_session.close()
         #config.logger.debug([type(i) for i in data.values()])
         return data, 201
 
@@ -759,8 +761,9 @@ plates = [
 # or when the application shuts down
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    #db.session.remove()
-    config.logger.info('close db')
+    config.logger.info(db_session)
+    db_session.remove()
+    config.logger.info(db_session)
 
 ##======================Route==================================
 @app.route("/", methods=['GET', 'POST'])
@@ -785,7 +788,7 @@ def confirm():
         line_pay = LinePay()
         line_pay.confirm(tx_id=int(tx_id), amount=float(order.amount))
         order.is_pay = True
-        db.session.commit()
+        db_session.commit()
 
         msg = order.display_receipt()
         config.line_bot_api.push_message(to=order.user_id, messages=msg)
@@ -1066,10 +1069,10 @@ def handle_postback(event):
                         is_pay=False,
                         amount=total,
                         user_id=user_id)
-        db.session.add(order)
+        db_session.add(order)
         for item in items:
-            db.session.add(item)
-        db.session.commit()
+            db_session.add(item)
+        db_session.commit()
         msg_reply = TemplateSendMessage(alt_text='Thx. Pls go ahead to the payment.',
                                         template=ButtonsTemplate(text='Thx. Pls go ahead to the payment.',
                                                                 actions=[URIAction(label='Pay NT${}'.format(order.amount), 
@@ -1111,8 +1114,8 @@ def handle_postback(event):
         licensePlate = data.get('licensePlate')
         user_id = data.get('userId')
         binder = Binders(plate=licensePlate, user_id=user_id)
-        db.session.add(binder)
-        db.session.commit()
+        db_session.add(binder)
+        db_session.commit()
         config.logger.debug((licensePlate, user_id))
 
 
