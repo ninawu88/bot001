@@ -52,7 +52,9 @@ def init_tables():
         db_session.commit()
 
 def init_db():
-    if (db.inspect(db.get_engine()).has_table('products')):
+    engine.connect()
+
+    if engine.dialect.has_table(engine, 'products'):
         return False
     else:    
         Base.metadata.create_all(bind=engine)
