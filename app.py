@@ -11,7 +11,7 @@ from linepay import LinePayApi
 
 from flask_sqlalchemy import SQLAlchemy
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, inspect
 from sqlalchemy.orm import relationship
 
 from flask_marshmallow import Marshmallow
@@ -52,9 +52,7 @@ def init_tables():
         db_session.commit()
 
 def init_db():
-    engine.connect()
-
-    if engine.dialect.has_table(engine, 'products'):
+    if inspect(engine).has_table('products'):
         return False
     else:    
         Base.metadata.create_all(bind=engine)
@@ -763,9 +761,7 @@ plates = [
 # or when the application shuts down
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    config.logger.info(db_session)
     db_session.remove()
-    config.logger.info(db_session)
 
 ##======================Route==================================
 @app.route("/", methods=['GET', 'POST'])
