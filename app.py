@@ -8,12 +8,8 @@ from linebot.exceptions import (
 )
 from linebot.models import *
 from linepay import LinePayApi
-
-from flask_sqlalchemy import SQLAlchemy
-
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, inspect
 from sqlalchemy.orm import relationship
-
 from flask_marshmallow import Marshmallow
 
 from urllib.parse import quote, parse_qsl
@@ -52,7 +48,7 @@ def init_tables():
         db_session.commit()
 
 def init_db():
-    if inspect(engine).has_table('products'):
+    if inspect(engine).has_table('products') and inspect(engine).has_table('scooters'):
         return False
     else:    
         Base.metadata.create_all(bind=engine)
@@ -702,7 +698,7 @@ class test(Resource):
             
             if _msg_id == '750':
                 db_session.add(Modem_750(**ModemSchema_750().load(data)))
-                config.logger.info(Modem_750.query.all()[-1].scooter.license_plate)
+                #config.logger.info(Modem_750.query.all()[-1].scooter.license_plate)
                 #config.logger.info(Modem_750.query.first().scooter.license_plate)
                 #config.logger.info(Scooters.query.filter(Scooters.license_plate.ilike(Modem_750.query.first().scooter.license_plate)).first().modem_750)
                 #config.logger.info(data)
