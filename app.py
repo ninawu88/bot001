@@ -731,8 +731,8 @@ class test(Resource):
             db_session.commit()
         except:
             db_session.rollback()
-        finally:
-            db_session.close()
+        #finally:
+            #db_session.close()
         #config.logger.debug([type(i) for i in data.values()])
         return data, 201
 
