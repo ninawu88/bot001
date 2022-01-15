@@ -408,14 +408,26 @@ class Modem_275(Base):
     deviceFwVersion = Column(String)
     deviceHwVersion = Column(String)
 
+# One User to Many Orders
 Users.orders = relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
-    # user.orders
-    # order.user, for backref
+# user.orders
+# order.user, for backref
+
+# One User to One Binder
 Users.binders = relationship('Binders', backref='user') 
+
+# One Order to Many Items
 Orders.items = relationship('Items', backref='order') 
-    # order.items
-    # item.order, for backref
+# order.items
+# item.order, for backref
+
+# One Product to Many Items
+Products.items = relationship('Items', backref='product')
+
+# One Scooter to Many modem_750 msgs
 Scooters.modem_750 = relationship('Modem_750', backref='scooter')
+
+# One Scooter to Many modem_275 msgs
 Scooters.modem_275 = relationship('Modem_275', backref='scooter')
 ##======================Marshmallow==================================
 mars = Marshmallow(app)
@@ -693,44 +705,44 @@ class test(Resource):
         
         _msg_id = data.get('messageId')
         _modem_id = data.get('modemId')
-        if Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first():
-            license_plate = Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first().license_plate
-            
-            if _msg_id == '750':
-                db_session.add(Modem_750(**ModemSchema_750().load(data)))
-                #config.logger.info(Modem_750.query.all()[-1].scooter.license_plate)
-                #config.logger.info(Modem_750.query.first().scooter.license_plate)
-                #config.logger.info(Scooters.query.filter(Scooters.license_plate.ilike(Modem_750.query.first().scooter.license_plate)).first().modem_750)
-                #config.logger.info(data)
-            elif _msg_id == '275':
-                db_session.add(Modem_275(**ModemSchema_275().load(data)))
-                config.logger.info(data)
-            else:
-                _user_id = Binders.query.filter(Binders.plate.ilike(license_plate)).first()
-                config.logger.info(_user_id)
-                if _msg_id == '180': 
-                    config.logger.info('Event Reserve Table')
-                    config.logger.info(data)
-                elif _msg_id == '177':
-                    config.logger.info('Tow Alert')
-                    config.logger.info(data)
-                elif any([_msg_id == s for s in ('160', '166', '167', '168', '175')]):
-                    config.logger.info('Format_extend')
-                    config.logger.info(data)
-                elif any([_msg_id == s for s in ('809', '810', '500', '501', '402')]):
-                    config.logger.info('Format_std')
-                    config.logger.info(data)
-
-        else:
-            config.logger.warn(f'{_modem_id} does not match any plate number in db')    
-
-        #config.logger.info(Scooters)        
-        #config.logger.info(Binders.query.filter(Binders.plate.ilike('epa0277')).first())
-
         try:
-            db_session.commit()
+            if Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first():
+                license_plate = Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first().license_plate
+                
+                if _msg_id == '750':
+                    db_session.add(Modem_750(**ModemSchema_750().load(data)))
+                    #config.logger.info(Modem_750.query.all()[-1].scooter.license_plate)
+                    #config.logger.info(Modem_750.query.first().scooter.license_plate)
+                    #config.logger.info(Scooters.query.filter(Scooters.license_plate.ilike(Modem_750.query.first().scooter.license_plate)).first().modem_750)
+                    #config.logger.info(data)
+                elif _msg_id == '275':
+                    db_session.add(Modem_275(**ModemSchema_275().load(data)))
+                    config.logger.info(data)
+                else:
+                    _user_id = Binders.query.filter(Binders.plate.ilike(license_plate)).first()
+                    config.logger.info(_user_id)
+                    if _msg_id == '180': 
+                        config.logger.info('Event Reserve Table')
+                        config.logger.info(data)
+                    elif _msg_id == '177':
+                        config.logger.info('Tow Alert')
+                        config.logger.info(data)
+                    elif any([_msg_id == s for s in ('160', '166', '167', '168', '175')]):
+                        config.logger.info('Format_extend')
+                        config.logger.info(data)
+                    elif any([_msg_id == s for s in ('809', '810', '500', '501', '402')]):
+                        config.logger.info('Format_std')
+                        config.logger.info(data)
+
+            else:
+                config.logger.warn(f'{_modem_id} does not match any plate number in db')    
+            #config.logger.info(Scooters)        
+            #config.logger.info(Binders.query.filter(Binders.plate.ilike('epa0277')).first())
         except:
             db_session.rollback()
+            raise
+        else:
+            db_session.commit()
         #finally:
             #db_session.close()
         #config.logger.debug([type(i) for i in data.values()])

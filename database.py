@@ -6,7 +6,10 @@ import config
 engine = create_engine(config.db_path, convert_unicode=True)
 #print(engine)
 
-db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=True, bind=engine))
+# When True, all query operations will issue a Session.flush() call to this Session before proceeding
+# It’s typical that autoflush is used in conjunction with autocommit=False
+# The Session object features autobegin the tx state, so that normally it is not necessary to call the Session.begin() method explicitly.
 
 Base = declarative_base()
 Base.query = db_session.query_property()
