@@ -698,54 +698,56 @@ class test(Resource):
 
     def post(self):
         data = request.get_json() # return as a dict
+        if type(data) == dict:
+            for i in ['gpsTime', 'rtcTime', 'posTime']:
+                if data.get(i):
+                    data[i] = strf_datetime(data[i])
         
-        for i in ['gpsTime', 'rtcTime', 'posTime']:
-            if data.get(i):
-                data[i] = strf_datetime(data[i])
-        
-        _msg_id = data.get('messageId')
-        _modem_id = data.get('modemId')
-        try:
-            if Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first():
-                license_plate = Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first().license_plate
-                
-                if _msg_id == '750':
-                    db_session.add(Modem_750(**ModemSchema_750().load(data)))
-                    #config.logger.info(Modem_750.query.all()[-1].scooter.license_plate)
-                    #config.logger.info(Modem_750.query.first().scooter.license_plate)
-                    #config.logger.info(Scooters.query.filter(Scooters.license_plate.ilike(Modem_750.query.first().scooter.license_plate)).first().modem_750)
-                    #config.logger.info(data)
-                elif _msg_id == '275':
-                    db_session.add(Modem_275(**ModemSchema_275().load(data)))
-                    config.logger.info(data)
-                else:
-                    _user_id = Binders.query.filter(Binders.plate.ilike(license_plate)).first()
-                    config.logger.info(_user_id)
-                    if _msg_id == '180': 
-                        config.logger.info('Event Reserve Table')
+            _msg_id = data.get('messageId')
+            _modem_id = data.get('modemId')
+            try:
+                if Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first():
+                    license_plate = Scooters.query.filter(Scooters.modem_id.ilike(_modem_id)).first().license_plate
+                    
+                    if _msg_id == '750':
+                        db_session.add(Modem_750(**ModemSchema_750().load(data)))
+                        #config.logger.info(Modem_750.query.all()[-1].scooter.license_plate)
+                        #config.logger.info(Modem_750.query.first().scooter.license_plate)
+                        #config.logger.info(Scooters.query.filter(Scooters.license_plate.ilike(Modem_750.query.first().scooter.license_plate)).first().modem_750)
+                        #config.logger.info(data)
+                    elif _msg_id == '275':
+                        db_session.add(Modem_275(**ModemSchema_275().load(data)))
                         config.logger.info(data)
-                    elif _msg_id == '177':
-                        config.logger.info('Tow Alert')
-                        config.logger.info(data)
-                    elif any([_msg_id == s for s in ('160', '166', '167', '168', '175')]):
-                        config.logger.info('Format_extend')
-                        config.logger.info(data)
-                    elif any([_msg_id == s for s in ('809', '810', '500', '501', '402')]):
-                        config.logger.info('Format_std')
-                        config.logger.info(data)
+                    else:
+                        _user_id = Binders.query.filter(Binders.plate.ilike(license_plate)).first()
+                        config.logger.info(_user_id)
+                        if _msg_id == '180': 
+                            config.logger.info('Event Reserve Table')
+                            config.logger.info(data)
+                        elif _msg_id == '177':
+                            config.logger.info('Tow Alert')
+                            config.logger.info(data)
+                        elif any([_msg_id == s for s in ('160', '166', '167', '168', '175')]):
+                            config.logger.info('Format_extend')
+                            config.logger.info(data)
+                        elif any([_msg_id == s for s in ('809', '810', '500', '501', '402')]):
+                            config.logger.info('Format_std')
+                            config.logger.info(data)
 
+                else:
+                    config.logger.warn(f'{_modem_id} does not match any plate number in db')    
+                #config.logger.info(Scooters)        
+                #config.logger.info(Binders.query.filter(Binders.plate.ilike('epa0277')).first())
+            except:
+                db_session.rollback()
+                raise
             else:
-                config.logger.warn(f'{_modem_id} does not match any plate number in db')    
-            #config.logger.info(Scooters)        
-            #config.logger.info(Binders.query.filter(Binders.plate.ilike('epa0277')).first())
-        except:
-            db_session.rollback()
-            raise
+                db_session.commit()
+            #finally:
+                #db_session.close()
+            #config.logger.debug([type(i) for i in data.values()])
         else:
-            db_session.commit()
-        #finally:
-            #db_session.close()
-        #config.logger.debug([type(i) for i in data.values()])
+            config.logger.warn(data)
         return data, 201
 
 yes_post_api.add_resource(test, '/test')
