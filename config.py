@@ -20,7 +20,7 @@ handler = WebhookHandler(Channel_secret)
 #print(os.environ.get('Channel_access_token'))
 
 # db
-db_path = 'sqlite:///' + f'{os.path.dirname(__file__)}/linebot.db'
+db_path = 'sqlite:///' + f'{os.path.dirname(__file__)}/linebot_prod.db'
 
 # linepay
 LINE_PAY_ID = os.environ.get('LINE_PAY_ID')
@@ -43,7 +43,6 @@ formatter = logging.Formatter(
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
-
 
 fh = logging.FileHandler(filename=f'linebot_{datetime.today().strftime("%Y-%m-%d")}.log', mode='w')
 fh.setLevel(logging.INFO)

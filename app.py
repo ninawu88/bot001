@@ -8,8 +8,8 @@ from linebot.exceptions import (
 )
 from linebot.models import *
 from linepay import LinePayApi
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, inspect
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, inspect, UniqueConstraint
+from sqlalchemy.orm import relationship, backref
 from flask_marshmallow import Marshmallow
 
 from urllib.parse import quote, parse_qsl
@@ -251,7 +251,6 @@ class Orders(Base):
     tx_id = Column(Integer)
     is_pay = Column(Boolean, default=False)
     created_time = Column(DateTime, default=datetime.now())
-
     user_id = Column(String, ForeignKey("users.id")) # Foreignkey(table_name.column_name)
 
     def display_receipt(self):
@@ -339,9 +338,10 @@ class Items(Base):
 class Binders(Base):
     __tablename__ = 'binders'
     id = Column(Integer, primary_key=True)
-    plate = Column(String)
+    plate = Column(String, ForeignKey("scooters.license_plate"), unique=True)
     created_time = Column(DateTime, default=datetime.now())
-    user_id = Column(String, ForeignKey("users.id")) # Foreignkey(table_name.column_name)
+    user_id = Column(String, ForeignKey("users.id"), unique=True) # Foreignkey(table_name.column_name)
+    #UniqueConstraint(plate, user_id, name='binder_constraints')
 
 class Modem_750(Base):
     __tablename__ = 'modem_750'
@@ -409,17 +409,13 @@ class Modem_275(Base):
     deviceHwVersion = Column(String)
 
 # One User to Many Orders
-Users.orders = relationship('Orders', backref='user') # relationship(cls_name, backref='var_name')
-# user.orders
-# order.user, for backref
+Users.orders = relationship('Orders', backref='user') # relationship(cls_name, back_populates='att_name')
 
 # One User to One Binder
-Users.binders = relationship('Binders', backref='user') 
+Binders.user = relationship('Users', backref=backref("binders", uselist=False))
 
 # One Order to Many Items
 Orders.items = relationship('Items', backref='order') 
-# order.items
-# item.order, for backref
 
 # One Product to Many Items
 Products.items = relationship('Items', backref='product')
@@ -429,6 +425,7 @@ Scooters.modem_750 = relationship('Modem_750', backref='scooter')
 
 # One Scooter to Many modem_275 msgs
 Scooters.modem_275 = relationship('Modem_275', backref='scooter')
+
 ##======================Marshmallow==================================
 mars = Marshmallow(app)
 class ModemSchema_750(mars.SQLAlchemyAutoSchema):

@@ -6,7 +6,7 @@
 /*.db
 /cs50/*
 /alembic/__pycache__/*
-/alembic/versions
+/alembic/versions/__pycache__*
 /alembic/README
 /alembic/script.py.mako
 /.gitignore
